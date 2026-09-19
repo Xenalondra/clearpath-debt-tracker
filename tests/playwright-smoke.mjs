@@ -22,5 +22,11 @@ await page.getByRole("button", { name: "Close" }).click();
 await page.locator("input[type=month]").fill("2026-10");
 assert.match(await page.locator("body").innerText(), /October 2026/);
 
+for (const route of ["/payments", "/debts", "/expenses", "/activity", "/settings"]) {
+  const response = await page.goto(`https://clearpath-debt-planner.secretofwings31.chatgpt.site${route}`, { waitUntil: "networkidle" });
+  assert.equal(response?.status(), 200, `${route} should load`);
+  await page.getByRole("heading", { name: /Your .* plan/ }).waitFor();
+}
+
 console.log("Playwright smoke test passed: live Clearpath planner loads and core interactions work.");
 await browser.close();
