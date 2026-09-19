@@ -1,13 +1,13 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { InstallAppButton } from "./install-app";
 import { calculateMinimumGap, calculateSafeExtra, estimatePayoffMonths, getPaymentStatus } from "../lib/planner-logic.mjs";
 
 type Strategy = "snowball" | "avalanche";
 type DebtCategory = "Personal Loan" | "Cash Loan" | "BNPL (Pay Later)" | "Credit Card" | "Other Loan";
 type Debt = { id: number; name: string; category: DebtCategory; balance: number; startingBalance: number; rate: number; minimum: number; planned: number; dueDay: number; creditLimit: number; color: string };
-type Bill = { id: number; name: string; category: string; amount: number; dueDay: number };
+type Bill = { id: number; name: string; category: string; amount: number; dueDay: number; type: "fixed" | "variable" | "one-time"; budget: number; actual?: number; month?: string };
 type DebtTransaction = { id: number; debtId: number; kind: "payment" | "charge"; amount: number; date: string; note: string };
 type IncomeEntry = { id: number; name: string; amount: number; date: string; recurring: boolean };
 type Modal = "debt" | "bill" | "income" | "transaction" | "payment" | "buffer" | null;
@@ -18,10 +18,10 @@ const starterDebts: Debt[] = [
   { id: 3, name: "Lazada PayLater", category: "BNPL (Pay Later)", balance: 43000, startingBalance: 64800, rate: 0, minimum: 3600, planned: 3600, dueDay: 18, creditLimit: 60000, color: "#e69b3f" },
 ];
 const starterBills: Bill[] = [
-  { id: 1, name: "Rent", category: "Home", amount: 18000, dueDay: 1 },
-  { id: 2, name: "Electricity", category: "Utilities", amount: 3200, dueDay: 15 },
-  { id: 3, name: "Internet", category: "Utilities", amount: 1699, dueDay: 20 },
-  { id: 4, name: "Insurance", category: "Protection", amount: 2500, dueDay: 26 },
+  { id: 1, name: "Rent", category: "Home", amount: 18000, budget: 18000, type: "fixed" },
+  { id: 2, name: "Electricity", category: "Utilities", amount: 3200, budget: 3200, type: "variable" },
+  { id: 3, name: "Internet", category: "Utilities", amount: 1699, budget: 1699, type: "fixed" },
+  { id: 4, name: "Insurance", category: "Protection", amount: 2500, budget: 2500, type: "fixed" },
 ];
 const palette = ["#7257d9", "#309c7d", "#e69b3f", "#df6d5b", "#427aa1", "#c04f84", "#4978d1", "#727c45"];
 const money = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 });
@@ -46,6 +46,7 @@ export default function Home() {
   const [modal, setModal] = useState<Modal>(null);
   const [selectedDebt, setSelectedDebt] = useState<number | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const restoreInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("clearpath-plan-v4-php");
@@ -53,7 +54,8 @@ export default function Home() {
     if (saved || legacy) try {
       const data = JSON.parse(saved || legacy || "{}");
       setDebts((data.debts ?? starterDebts).map((d: Partial<Debt>, i: number) => ({ category: "Other Loan", creditLimit: 0, color: palette[i % palette.length], ...d })));
-      setBills(data.bills ?? starterBills); setTransactions(data.transactions ?? []);
+      setBills((data.bills ?? starterBills).map((bill: Partial<Bill>) => ({ type: "fixed", budget: bill.amount ?? 0, ...bill })));
+      setTransactions(data.transactions ?? []);
       setIncomeEntries(data.incomeEntries ?? [{ id: 1, name: "Salary", amount: data.income ?? 85000, date: `${currentMonth}-15`, recurring: true }]);
       setCashBuffer(data.cashBuffer ?? 5000);
       setStrategy(data.strategy ?? "avalanche"); setChecked(data.checked ?? []);
@@ -89,8 +91,9 @@ export default function Home() {
   const progress = startingTotal ? Math.max(0, Math.round(((startingTotal - totalDebt) / startingTotal) * 100)) : 0;
   const obligations = useMemo(() => [
     ...debts.map((debt) => ({ id: `debt-${debt.id}`, kind: debt.category, name: debt.name, amount: debt.planned, dueDay: debt.dueDay, color: debt.color })),
-    ...bills.map((bill) => ({ id: `bill-${bill.id}`, kind: bill.category, name: bill.name, amount: bill.amount, dueDay: bill.dueDay, color: "#b9afa0" })),
+    ...bills.filter((bill) => bill.type !== "one-time" || bill.month === selectedMonth).map((bill) => ({ id: `bill-${bill.id}`, kind: bill.category, name: bill.name, amount: bill.actual ?? bill.amount, dueDay: bill.dueDay, color: "#b9afa0" })),
   ].sort((a, b) => a.dueDay - b.dueDay), [debts, bills]);
+  const cashTimeline = useMemo(() => { const events = [...monthIncomeEntries.map((entry) => ({ day: Number(entry.date.slice(8, 10)), name: entry.name, amount: entry.amount, income: true })), ...obligations.map((item) => ({ day: item.dueDay, name: item.name, amount: -item.amount, income: false }))].sort((a, b) => a.day - b.day); let running = 0; let lowest = 0; const rows = events.map((event) => { running += event.amount; lowest = Math.min(lowest, running); return { ...event, running }; }); return { rows, lowest, nextIncome: rows.find((row) => row.income) }; }, [monthIncomeEntries, obligations]);
   const paidCount = obligations.filter((item) => checked.includes(`${selectedMonth}-${item.id}`)).length;
 
   function togglePaid(id: string) {
@@ -104,7 +107,8 @@ export default function Home() {
   }
   function addBill(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const data = new FormData(event.currentTarget);
-    setBills((items) => [...items, { id: Date.now(), name: String(data.get("name")), category: String(data.get("category")), amount: Number(data.get("amount")), dueDay: Number(data.get("dueDay")) }]); setModal(null);
+    const budget = Number(data.get("amount")); const type = String(data.get("type")) as Bill["type"]; const actual = Number(data.get("actual")) || undefined;
+    setBills((items) => [...items, { id: Date.now(), name: String(data.get("name")), category: String(data.get("category")), amount: actual ?? budget, budget, actual, type, month: type === "one-time" ? String(data.get("month")) : undefined, dueDay: Number(data.get("dueDay")) }]); setModal(null);
   }
   function addIncome(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const data = new FormData(event.currentTarget);
@@ -127,6 +131,8 @@ export default function Home() {
     setDebts((items) => items.map((item) => ({ ...item, planned: item.minimum + (item.id === target.id ? safeExtra : 0) })));
   }
   function updateBuffer(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setCashBuffer(Number(new FormData(event.currentTarget).get("buffer"))); setModal(null); }
+  function exportBackup() { const blob = new Blob([JSON.stringify({ clearpathVersion: 1, exportedAt: new Date().toISOString(), debts, bills, transactions, incomeEntries, cashBuffer, strategy, checked }, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `clearpath-backup-${new Date().toISOString().slice(0, 10)}.json`; anchor.click(); URL.revokeObjectURL(url); }
+  function restoreBackup(event: ChangeEvent<HTMLInputElement>) { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { const data = JSON.parse(String(reader.result)); if (!data.clearpathVersion || !Array.isArray(data.debts)) throw new Error("Invalid backup"); setDebts(data.debts); setBills(data.bills ?? []); setTransactions(data.transactions ?? []); setIncomeEntries(data.incomeEntries ?? []); setCashBuffer(data.cashBuffer ?? 5000); setStrategy(data.strategy ?? "avalanche"); setChecked(data.checked ?? []); alert("Clearpath backup restored."); } catch { alert("That file is not a valid Clearpath backup."); } }; reader.readAsText(file); event.target.value = ""; }
 
   const activeDebt = debts.find((item) => item.id === selectedDebt);
   const monthShort = monthLabel(selectedMonth).slice(0, 3).toUpperCase();
@@ -139,7 +145,7 @@ export default function Home() {
     </aside>
 
     <section className="content" id="top">
-      <header><div><p className="eyebrow">YOUR MONTHLY MONEY PLAN</p><h1>Know what’s due. Clear what’s next.</h1><p>A focused checklist for debts, income, and fixed expenses in Philippine pesos.</p></div><div className="header-actions"><InstallAppButton/><button className="outline-button" onClick={() => setModal("income")}>＋ Add income</button></div></header>
+      <header><div><p className="eyebrow">YOUR MONTHLY MONEY PLAN</p><h1>Know what’s due. Clear what’s next.</h1><p>A focused checklist for debts, income, and fixed expenses in Philippine pesos.</p></div><div className="header-actions"><InstallAppButton/><button className="outline-button" onClick={() => setModal("income")}>＋ Add income</button><button className="outline-button" onClick={exportBackup}>Export backup</button><button className="outline-button" onClick={() => restoreInput.current?.click()}>Restore</button><input ref={restoreInput} type="file" accept="application/json" hidden onChange={restoreBackup}/></div></header>
 
       <div className="month-toolbar"><button onClick={() => setSelectedMonth(new Date(new Date(`${selectedMonth}-02`).setMonth(new Date(`${selectedMonth}-02`).getMonth() - 1)).toISOString().slice(0, 7))} aria-label="Previous month">‹</button><label>Viewing month<input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} /></label><button onClick={() => setSelectedMonth(new Date(new Date(`${selectedMonth}-02`).setMonth(new Date(`${selectedMonth}-02`).getMonth() + 1)).toISOString().slice(0, 7))} aria-label="Next month">›</button><strong>{monthLabel(selectedMonth)}</strong></div>
 
@@ -151,6 +157,7 @@ export default function Home() {
       </section>
 
       <section className="income-strip"><div><p className="eyebrow">INCOME SCHEDULE</p><h2>Money coming in</h2></div><div className="income-chips">{monthIncomeEntries.map((entry) => <div className="income-chip" key={entry.id}><span>{entry.recurring ? "↻" : "+"}</span><div><strong>{entry.name}</strong><small>{entry.recurring ? `Every month · day ${Number(entry.date.slice(8, 10))}` : new Date(`${entry.date}T12:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}</small></div><b>{money.format(entry.amount)}</b><button onClick={() => removeIncome(entry.id)} aria-label={`Remove ${entry.name}`}>×</button></div>)}</div><button className="text-button" onClick={() => setModal("income")}>＋ Salary, bonus, or extra</button></section>
+      <section className="timeline-card"><div className="section-title"><div><p className="eyebrow">CASH TIMELINE · {monthLabel(selectedMonth).toUpperCase()}</p><h2>Payday-to-payday view</h2><p>Projected from zero at the start of the selected month. Add starting cash for a complete forecast.</p></div><strong className="timeline-low">Lowest projected: {money.format(cashTimeline.lowest)}</strong></div><div className="timeline-events">{cashTimeline.rows.slice(0, 8).map((event, index) => <div className="timeline-event" key={`${event.name}-${event.day}-${index}`}><span>{event.day}</span><div><strong>{event.name}</strong><small>{event.income ? "Income" : "Payment or expense"}</small></div><b className={event.income ? "in" : "out"}>{event.income ? "+" : "−"}{money.format(Math.abs(event.amount))}</b><em>{money.format(event.running)}</em></div>)}</div><div className="timeline-callout"><b>{cashTimeline.nextIncome ? `Next income: ${cashTimeline.nextIncome.name} on day ${cashTimeline.nextIncome.day}` : "Add an income date"}</b><span>Use this view to see obligations before the next payday. The protected buffer still controls extra-payment recommendations.</span></div></section>
 
       <section className="hero-grid">
         <article className="balance-card"><p>TOTAL DEBT</p><h2>{money.format(totalDebt)}</h2><div className="change">{progress}% paid <span>from {money.format(startingTotal)}</span></div><div className="mountain" aria-hidden="true"><i/><i/><i/><i/><i/><i/><i/></div><div className="months"><span>START</span><span>20%</span><span>40%</span><span>60%</span><span>80%</span><span>NOW</span><span>ZERO</span></div></article>
@@ -177,7 +184,7 @@ export default function Home() {
 
     {modal && <div className="modal-backdrop" onMouseDown={() => setModal(null)}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onMouseDown={(event) => event.stopPropagation()}><button className="close" onClick={() => setModal(null)} aria-label="Close">×</button>
       {modal === "debt" && <><p className="eyebrow">NEW ACCOUNT</p><h2 id="modal-title">Add a debt</h2><form onSubmit={addDebt}><label>Name<input name="name" required placeholder="Bank, card, Lazada PayLater…" /></label><div className="form-row"><label>Debt category<select name="category"><option>Personal Loan</option><option>Cash Loan</option><option>BNPL (Pay Later)</option><option>Credit Card</option><option>Other Loan</option></select></label><label>Card color<input name="color" type="color" defaultValue={palette[debts.length % palette.length]} /></label></div><div className="form-row"><label>Current balance<input name="balance" required type="number" min="0" step="0.01" /></label><label>Credit limit (optional)<input name="creditLimit" type="number" min="0" step="0.01" /></label></div><div className="form-row"><label>APR (%)<input name="rate" required type="number" min="0" step="0.1" /></label><label>Due day<input name="dueDay" required type="number" min="1" max="31" /></label></div><div className="form-row"><label>Minimum payment<input name="minimum" required type="number" min="0" step="0.01" /></label><label>Planned payment<input name="planned" type="number" min="0" step="0.01" /></label></div><button type="submit">Add to plan</button></form></>}
-      {modal === "bill" && <><p className="eyebrow">RECURRING OBLIGATION</p><h2 id="modal-title">Add fixed expense</h2><form onSubmit={addBill}><label>Name<input name="name" required placeholder="Rent, electricity, insurance…" /></label><div className="form-row"><label>Monthly amount<input name="amount" required type="number" min="0" step="0.01" /></label><label>Due day<input name="dueDay" required type="number" min="1" max="31" /></label></div><label>Category<select name="category"><option>Home</option><option>Utilities</option><option>Protection</option><option>Subscription</option><option>Family</option><option>Other</option></select></label><button type="submit">Add to checklist</button></form></>}
+      {modal === "bill" && <><p className="eyebrow">PLANNED OBLIGATION</p><h2 id="modal-title">Add an expense</h2><form onSubmit={addBill}><label>Name<input name="name" required placeholder="Rent, electricity, vet…" /></label><div className="form-row"><label>Expense type<select name="type"><option value="fixed">Fixed recurring</option><option value="variable">Variable recurring</option><option value="one-time">One-time planned</option></select></label><label>Due day<input name="dueDay" required type="number" min="1" max="31" /></label></div><div className="form-row"><label>Budget / expected amount<input name="amount" required type="number" min="0" step="0.01" /></label><label>Actual amount (optional)<input name="actual" type="number" min="0" step="0.01" /></label></div><label>Category<select name="category"><option>Home</option><option>Utilities</option><option>Protection</option><option>Subscription</option><option>Family</option><option>Other</option></select></label><label>Month for one-time expense<input name="month" type="month" defaultValue={selectedMonth} /></label><button type="submit">Add to checklist</button></form></>}
       {modal === "income" && <><p className="eyebrow">CASH FLOW</p><h2 id="modal-title">Add income</h2><form onSubmit={addIncome}><label>Income name<input name="name" required placeholder="Salary, bonus, side income…" /></label><div className="form-row"><label>Amount<input name="amount" required type="number" min="0" step="0.01" /></label><label>Expected date<input name="date" required type="date" defaultValue={`${selectedMonth}-15`} /></label></div><label className="checkbox-label"><input name="recurring" type="checkbox" /> Repeat this income every month</label><p className="form-help">Leave repeat unchecked for a one-time bonus or extra income.</p><button type="submit">Add income</button></form></>}
       {modal === "buffer" && <><p className="eyebrow">CASH SAFETY</p><h2 id="modal-title">Protect a cash buffer</h2><form onSubmit={updateBuffer}><label>Never plan below<input name="buffer" required type="number" min="0" step="100" defaultValue={cashBuffer} /></label><p className="form-help">This reserve is kept out of debt recommendations for emergencies and timing gaps between paydays.</p><button type="submit">Save buffer</button></form></>}
       {modal === "payment" && activeDebt && <><p className="eyebrow">EDIT MONTHLY DUE</p><h2 id="modal-title">Update {activeDebt.name}</h2><form onSubmit={updatePayment}><div className="form-row"><label>Minimum due<input name="minimum" required type="number" min="0" step="0.01" defaultValue={activeDebt.minimum} /></label><label>Planned payment<input name="planned" required type="number" min="0" step="0.01" defaultValue={activeDebt.planned} /></label></div><div className="form-row"><label>Due day<input name="dueDay" required type="number" min="1" max="31" defaultValue={activeDebt.dueDay} /></label><label>Credit limit<input name="creditLimit" type="number" min="0" step="0.01" defaultValue={activeDebt.creditLimit || ""} /></label></div><p className="form-help">Use this whenever a PayLater minimum changes. Credit utilization appears when a limit is entered.</p><button type="submit">Save changes</button></form></>}
