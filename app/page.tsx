@@ -70,8 +70,15 @@ export default function Home() {
   const plannedDebt = debts.reduce((sum, item) => sum + item.planned, 0);
   const fixedExpenses = bills.reduce((sum, item) => sum + item.amount, 0);
   const remaining = income - plannedDebt - fixedExpenses;
+  const essentialOutflow = fixedExpenses + minimums;
+  const safeExtra = Math.max(0, income - essentialOutflow);
+  const minimumGap = Math.max(0, essentialOutflow - income);
+  const plannedExtra = Math.max(0, plannedDebt - minimums);
   const orderedDebts = useMemo(() => [...debts].sort((a, b) => strategy === "snowball" ? a.balance - b.balance : b.rate - a.rate), [debts, strategy]);
   const target = orderedDebts[0];
+  const categoryColors: Record<DebtCategory, string> = { "Credit Card": "#7257d9", "Personal Loan": "#309c7d", "Cash Loan": "#df6d5b", "BNPL (Pay Later)": "#e69b3f", "Other Loan": "#427aa1" };
+  const categoryBalances = useMemo(() => Object.entries(debts.reduce((groups, debt) => { groups[debt.category] = (groups[debt.category] || 0) + debt.balance; return groups; }, {} as Record<DebtCategory, number>)).sort((a, b) => b[1] - a[1]) as [DebtCategory, number][], [debts]);
+  const pieGradient = useMemo(() => { let cursor = 0; const stops = categoryBalances.map(([category, balance]) => { const start = cursor; cursor += totalDebt ? balance / totalDebt * 100 : 0; return `${categoryColors[category]} ${start}% ${cursor}%`; }); return stops.length ? `conic-gradient(${stops.join(",")})` : "#ece8df"; }, [categoryBalances, totalDebt]);
   const startingTotal = debts.reduce((sum, debt) => sum + debt.startingBalance, 0);
   const progress = startingTotal ? Math.max(0, Math.round(((startingTotal - totalDebt) / startingTotal) * 100)) : 0;
   const obligations = useMemo(() => [
@@ -109,6 +116,10 @@ export default function Home() {
     if (kind === "payment") setChecked((items) => [...new Set([...items, `${date.slice(0, 7)}-debt-${selectedDebt}`])]); setModal(null);
   }
   function removeIncome(id: number) { setIncomeEntries((items) => items.filter((item) => item.id !== id)); }
+  function applyRecommendedPlan() {
+    if (!target || safeExtra <= 0) return;
+    setDebts((items) => items.map((item) => ({ ...item, planned: item.minimum + (item.id === target.id ? safeExtra : 0) })));
+  }
 
   const activeDebt = debts.find((item) => item.id === selectedDebt);
   const monthShort = monthLabel(selectedMonth).slice(0, 3).toUpperCase();
@@ -136,7 +147,8 @@ export default function Home() {
 
       <section className="hero-grid">
         <article className="balance-card"><p>TOTAL DEBT</p><h2>{money.format(totalDebt)}</h2><div className="change">{progress}% paid <span>from {money.format(startingTotal)}</span></div><div className="mountain" aria-hidden="true"><i/><i/><i/><i/><i/><i/><i/></div><div className="months"><span>START</span><span>20%</span><span>40%</span><span>60%</span><span>80%</span><span>NOW</span><span>ZERO</span></div></article>
-        <article className="target-card" id="strategy"><div className="target-top"><div><p className="eyebrow">CURRENT TARGET</p><h2>{target?.name ?? "Add a debt"}</h2></div><span className="target-badge">#{target ? 1 : "–"}</span></div><p>{strategy === "avalanche" ? `Highest APR at ${target?.rate ?? 0}%—prioritizing this saves interest.` : `Smallest balance at ${money.format(target?.balance ?? 0)}—a faster motivational win.`}</p><div className="strategy-switch" role="group" aria-label="Payoff strategy"><button className={strategy === "avalanche" ? "selected" : ""} onClick={() => setStrategy("avalanche")}>Avalanche</button><button className={strategy === "snowball" ? "selected" : ""} onClick={() => setStrategy("snowball")}>Snowball</button></div>{remaining > 0 && target && <div className="recommendation"><b>Suggested extra</b><span>Put up to {money.format(remaining)} more toward {target.name}.</span></div>}</article>
+        <article className="target-card" id="strategy"><div className="target-top"><div><p className="eyebrow">SMART PAYMENT PLAN</p><h2>{target?.name ?? "Add a debt"}</h2></div><span className="target-badge">#{target ? 1 : "–"}</span></div><p>{strategy === "avalanche" ? `Targeting the highest APR (${target?.rate ?? 0}%) saves the most interest.` : `Targeting the smallest balance (${money.format(target?.balance ?? 0)}) creates the fastest payoff win.`}</p><div className="strategy-switch" role="group" aria-label="Payoff strategy"><button className={strategy === "avalanche" ? "selected" : ""} onClick={() => setStrategy("avalanche")}>Avalanche</button><button className={strategy === "snowball" ? "selected" : ""} onClick={() => setStrategy("snowball")}>Snowball</button></div>{minimumGap > 0 ? <div className="recommendation warning"><b>Minimums first</b><span>You are {money.format(minimumGap)} short for bills and debt minimums. Pay minimums only and reduce non-essential costs.</span></div> : safeExtra === 0 ? <div className="recommendation neutral"><b>Minimum-only month</b><span>Your income covers essentials, but there is no safe extra this month.</span></div> : <div className="recommendation"><b>{plannedExtra >= safeExtra ? "Plan is fully assigned" : "Safe extra available"}</b><span>{plannedExtra >= safeExtra ? `${money.format(safeExtra)} above minimums is already planned.` : `Add up to ${money.format(safeExtra - plannedExtra)} more to ${target?.name}.`}</span></div>}{target && safeExtra > 0 && plannedExtra !== safeExtra && <button className="apply-plan" onClick={applyRecommendedPlan}>Use recommended plan · {money.format(target.minimum + safeExtra)} to target</button>}</article>
+        <article className="category-card"><p className="eyebrow">BALANCE BY CATEGORY</p><h2>Where your debt sits</h2><div className="pie-wrap"><div className="pie-chart" style={{ background: pieGradient }} role="img" aria-label="Debt balance by category"><span><b>{money.format(totalDebt)}</b><small>Total balance</small></span></div><div className="pie-legend">{categoryBalances.map(([category, balance]) => <div key={category}><i style={{ background: categoryColors[category] }} /><span>{category}</span><b>{totalDebt ? Math.round(balance / totalDebt * 100) : 0}%</b><small>{money.format(balance)}</small></div>)}</div></div></article>
       </section>
 
       <section className="section-block checklist-section" id="month">
