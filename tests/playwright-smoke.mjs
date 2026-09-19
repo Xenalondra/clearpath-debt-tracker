@@ -50,9 +50,21 @@ await page.getByLabel("Amount").fill("3000");
 await page.getByLabel("Note (optional)").fill("Test borrowing");
 await page.getByRole("dialog").getByRole("button", { name: "Record activity" }).click();
 assert.match(await page.locator(".debt-card").first().innerText(), /₱143,000/);
+for (const [kind, amount, expected] of [["interest", "500", /₱143,500/], ["fee", "200", /₱143,700/]]) {
+  await page.getByRole("button", { name: "Record activity" }).first().click();
+  await page.getByLabel("Activity type").selectOption(kind);
+  await page.getByLabel("Amount").fill(amount);
+  await page.getByRole("dialog").getByRole("button", { name: "Record activity" }).click();
+  assert.match(await page.locator(".debt-card").first().innerText(), expected);
+}
 await page.getByRole("button", { name: "Edit debt" }).first().click();
 assert.ok(await page.getByRole("heading", { name: "Edit debt" }).isVisible());
 await page.getByRole("button", { name: "Close" }).click();
+await page.getByRole("button", { name: "Reconcile balance" }).first().click();
+await page.getByLabel("Actual lender balance").fill("143000");
+await page.getByLabel("Reason").fill("Matched test statement");
+await page.getByRole("dialog").getByRole("button", { name: "Reconcile balance" }).click();
+assert.match(await page.locator(".debt-card").first().innerText(), /₱143,000/);
 
 await page.goto(`${base}/expenses`, { waitUntil: "domcontentloaded" });
 await page.waitForTimeout(750);
@@ -81,6 +93,9 @@ assert.equal(await page.getByLabel("Viewing month").count(), 0);
 assert.equal(await page.getByLabel("Currency").count(), 0);
 assert.match(await page.locator(".info-row").innerText(), /Philippine Peso/);
 assert.ok(await page.getByRole("button", { name: "Export backup" }).isVisible());
+const downloadPromise = page.waitForEvent("download");
+await page.getByRole("button", { name: "Export backup" }).click();
+await downloadPromise;
 
 await page.goto(`${base}/payments`, { waitUntil: "domcontentloaded" });
 assert.ok(page.url().includes("/#month") || page.url().endsWith("/"));
