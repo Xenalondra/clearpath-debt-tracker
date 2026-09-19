@@ -29,5 +29,6 @@ export function InstallAppButton() {
   }
 
   if (installed) return <span className="installed-badge">✓ App installed</span>;
-  return <button className="install-button" onClick={install} disabled={!prompt} title={!prompt ? "Use your browser menu and choose Add to Home Screen" : "Install Clearpath"}>↓ Install app</button>;
+  if (!prompt) return null;
+  return <button className="install-button" onClick={install} title="Install Clearpath">↓ Install app</button>;
 }

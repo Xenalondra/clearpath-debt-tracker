@@ -15,6 +15,14 @@ test("payment status distinguishes partial, minimum, and planned payments", () =
   assert.equal(getPaymentStatus(2000, 1000, 2000), "planned");
 });
 
+test("payment status is date-aware when an obligation is unpaid", () => {
+  const today = new Date("2026-09-19T12:00:00");
+  assert.equal(getPaymentStatus(0, 1000, 2000, "2026-09-10", today), "overdue");
+  assert.equal(getPaymentStatus(0, 1000, 2000, "2026-09-19", today), "due today");
+  assert.equal(getPaymentStatus(0, 1000, 2000, "2026-09-21", today), "due soon");
+  assert.equal(getPaymentStatus(0, 1000, 2000, "2026-09-30", today), "upcoming");
+});
+
 test("payoff estimate responds to extra cash and payoff strategy", () => {
   const debts = [
     { balance: 6000, minimum: 1000, rate: 5 },
