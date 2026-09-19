@@ -97,6 +97,24 @@ const downloadPromise = page.waitForEvent("download");
 await page.getByRole("button", { name: "Export backup" }).click();
 await downloadPromise;
 
+await page.goto(base, { waitUntil: "domcontentloaded" });
+await page.evaluate(() => {
+  const month = new Date().toISOString().slice(0, 7);
+  const debts = Array.from({ length: 5 }, (_, index) => ({ id: index + 1, name: `Debt ${index + 1}`, category: "Personal Loan", balance: 10000, startingBalance: 11000, rate: 10, minimum: 1000, planned: 1000, dueDay: index + 1, creditLimit: 0, color: "#7257d9" }));
+  const bills = Array.from({ length: 6 }, (_, index) => ({ id: index + 1, name: `Expense ${index + 1}`, category: "Utilities", amount: 500, budget: 500, type: "fixed", dueDay: index + 10 }));
+  const transactions = [
+    ...debts.map((debt, index) => ({ id: 100 + index, entity: "debt", debtId: debt.id, kind: "payment", amount: 1000, date: `${month}-01`, note: "Fixture payment" })),
+    ...bills.slice(0, 4).map((bill, index) => ({ id: 200 + index, entity: "expense", expenseId: bill.id, kind: "expense-payment", amount: 500, date: `${month}-02`, note: "Fixture expense payment" })),
+  ];
+  localStorage.setItem("clearpath-plan-v4-php", JSON.stringify({ clearpathVersion: 2, debts, bills, transactions, incomeEntries: [], cashBuffer: 0, strategy: "avalanche", textSize: "standard", dueSoonThreshold: 3 }));
+});
+await page.reload({ waitUntil: "domcontentloaded" });
+await page.waitForTimeout(750);
+assert.match(await page.locator("#month").innerText(), /9 paid · 2 still due/);
+assert.equal(await page.locator('.checkbox-button[aria-pressed="true"]').count(), 9);
+assert.equal(await page.locator('.checkbox-button[aria-pressed="false"]').count(), 2);
+assert.match(await page.locator(".sidebar-bottom").innerText(), /9 of 11/);
+
 await page.goto(`${base}/payments`, { waitUntil: "domcontentloaded" });
 assert.ok(page.url().includes("/#month") || page.url().endsWith("/"));
 
