@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { InstallAppButton } from "./install-app";
+import { calculateMinimumGap, calculateSafeExtra, estimatePayoffMonths, getPaymentStatus } from "../lib/planner-logic.mjs";
 
 type Strategy = "snowball" | "avalanche";
 type DebtCategory = "Personal Loan" | "Cash Loan" | "BNPL (Pay Later)" | "Credit Card" | "Other Loan";
@@ -73,13 +74,13 @@ export default function Home() {
   const fixedExpenses = bills.reduce((sum, item) => sum + item.amount, 0);
   const remaining = income - plannedDebt - fixedExpenses;
   const essentialOutflow = fixedExpenses + minimums;
-  const safeExtra = Math.max(0, income - essentialOutflow - cashBuffer);
-  const minimumGap = Math.max(0, essentialOutflow + cashBuffer - income);
+  const safeExtra = calculateSafeExtra(income, fixedExpenses, minimums, cashBuffer);
+  const minimumGap = calculateMinimumGap(income, fixedExpenses, minimums, cashBuffer);
   const plannedExtra = Math.max(0, plannedDebt - minimums);
   const orderedDebts = useMemo(() => [...debts].sort((a, b) => strategy === "snowball" ? a.balance - b.balance : b.rate - a.rate), [debts, strategy]);
   const target = orderedDebts[0];
   const monthPaid = useMemo(() => transactions.filter((item) => inSelectedMonth(item.date, selectedMonth) && item.kind === "payment").reduce((map, item) => { map[item.debtId] = (map[item.debtId] || 0) + item.amount; return map; }, {} as Record<number, number>), [transactions, selectedMonth]);
-  const forecastMonths = useMemo(() => { let balances = debts.map((d) => ({ balance: d.balance, minimum: d.minimum, planned: d.planned })); let months = 0; while (balances.some((d) => d.balance > 0.5) && months < 240) { let extra = Math.max(0, safeExtra); const order = [...balances].sort((a, b) => strategy === "snowball" ? a.balance - b.balance : b.minimum - a.minimum); for (const debt of order) { const pay = Math.min(debt.balance, debt.minimum + extra); debt.balance = Math.max(0, debt.balance - pay); extra = Math.max(0, extra - Math.max(0, pay - debt.minimum)); } months += 1; } return months; }, [debts, safeExtra, strategy]);
+  const forecastMonths = useMemo(() => estimatePayoffMonths(debts, safeExtra, strategy), [debts, safeExtra, strategy]);
   const forecastDate = useMemo(() => { const date = new Date(`${selectedMonth}-02T12:00:00`); date.setMonth(date.getMonth() + forecastMonths); return date.toLocaleDateString("en-PH", { month: "long", year: "numeric" }); }, [forecastMonths, selectedMonth]);
   const categoryColors: Record<DebtCategory, string> = { "Credit Card": "#7257d9", "Personal Loan": "#309c7d", "Cash Loan": "#df6d5b", "BNPL (Pay Later)": "#e69b3f", "Other Loan": "#427aa1" };
   const categoryBalances = useMemo(() => Object.entries(debts.reduce((groups, debt) => { groups[debt.category] = (groups[debt.category] || 0) + debt.balance; return groups; }, {} as Record<DebtCategory, number>)).sort((a, b) => b[1] - a[1]) as [DebtCategory, number][], [debts]);
@@ -159,7 +160,7 @@ export default function Home() {
 
       <section className="section-block checklist-section" id="month">
         <div className="section-title"><div><p className="eyebrow">{monthLabel(selectedMonth).toUpperCase()}</p><h2>Payment checklist</h2><p>{paidCount} paid · {obligations.length - paidCount} still due</p></div><button className="text-button" onClick={() => setModal("bill")}>＋ Add fixed expense</button></div>
-        <div className="checklist">{obligations.map((item) => { const debtId = item.id.startsWith("debt-") ? Number(item.id.slice(5)) : null; const debtRef = debtId ? debts.find((debt) => debt.id === debtId) : null; const paid = debtId ? (monthPaid[debtId] || 0) : (checked.includes(`${selectedMonth}-${item.id}`) ? item.amount : 0); const minimumPaid = debtRef ? paid >= debtRef.minimum : paid >= item.amount; const isPaid = paid >= item.amount; const isPartial = paid > 0 && !minimumPaid; const status = isPaid ? "Planned met" : minimumPaid ? "Minimum paid" : isPartial ? "Partial" : "Due"; return <label className={`check-row ${isPaid ? "is-paid" : ""}`} key={item.id}><input type="checkbox" checked={isPaid} onChange={() => togglePaid(item.id)} /><span className="custom-check">✓</span><span className="due-date">{item.dueDay}<small>{monthShort}</small></span><span className="check-name"><strong>{item.name}</strong><small>{item.kind}</small></span><strong className="check-amount">{money.format(item.amount)}{paid > 0 && !isPaid && <small className="paid-progress">{money.format(paid)} paid</small>}</strong><span className={`status ${isPartial || minimumPaid ? "partial" : ""}`}>{status}</span></label>})}</div>
+        <div className="checklist">{obligations.map((item) => { const debtId = item.id.startsWith("debt-") ? Number(item.id.slice(5)) : null; const debtRef = debtId ? debts.find((debt) => debt.id === debtId) : null; const paid = debtId ? (monthPaid[debtId] || 0) : (checked.includes(`${selectedMonth}-${item.id}`) ? item.amount : 0); const status = getPaymentStatus(paid, debtRef?.minimum ?? item.amount, item.amount); const isPaid = status === "planned"; const isPartial = status === "partial"; const statusLabel = status === "planned" ? "Planned met" : status === "minimum" ? "Minimum paid" : status === "partial" ? "Partial" : "Due"; return <label className={`check-row ${isPaid ? "is-paid" : ""}`} key={item.id}><input type="checkbox" checked={isPaid} onChange={() => togglePaid(item.id)} /><span className="custom-check">✓</span><span className="due-date">{item.dueDay}<small>{monthShort}</small></span><span className="check-name"><strong>{item.name}</strong><small>{item.kind}</small></span><strong className="check-amount">{money.format(item.amount)}{paid > 0 && !isPaid && <small className="paid-progress">{money.format(paid)} paid</small>}</strong><span className={`status ${isPartial || status === "minimum" ? "partial" : ""}`}>{statusLabel}</span></label>})}</div>
       </section>
 
       <section className="section-block" id="debts">
