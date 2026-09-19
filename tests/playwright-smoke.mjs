@@ -32,6 +32,7 @@ await page.getByRole("button", { name: "Record payment" }).click();
 await page.getByText(/₱2,000 payment recorded for Visa Platinum/).waitFor();
 
 await page.goto(`${base}/debts`, { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(750);
 await page.getByRole("button", { name: /Add debt/ }).click();
 await page.getByRole("heading", { name: "Add a debt" }).waitFor();
 assert.ok(await page.locator('input[name="name"]').isVisible());
@@ -54,6 +55,7 @@ assert.ok(await page.getByRole("heading", { name: "Edit debt" }).isVisible());
 await page.getByRole("button", { name: "Close" }).click();
 
 await page.goto(`${base}/expenses`, { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(750);
 await page.getByRole("button", { name: /Add expense/ }).click();
 for (const label of ["Expense type", "Budget / expected amount", "Actual amount (optional)", "Category"]) assert.ok(await page.getByLabel(label).isVisible());
 await page.getByLabel("Name").fill("Test Internet");
@@ -74,6 +76,7 @@ await page.locator(".expense-row").filter({ hasText: "Test Internet Updated" }).
 assert.equal(await page.getByText("Test Internet Updated", { exact: true }).count(), 0);
 
 await page.goto(`${base}/settings`, { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(750);
 assert.equal(await page.getByLabel("Viewing month").count(), 0);
 assert.equal(await page.getByLabel("Currency").count(), 0);
 assert.match(await page.locator(".info-row").innerText(), /Philippine Peso/);
