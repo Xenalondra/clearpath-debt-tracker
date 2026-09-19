@@ -18,10 +18,14 @@ test("server-renders the Clearpath planner", async () => {
   assert.match(html, /Clearpath/);
   assert.match(html, /Philippine pesos/);
   assert.match(html, /Payment checklist/);
-  assert.match(html, /BALANCE BY CATEGORY/);
   assert.match(html, /SMART PAYMENT PLAN/);
-  assert.match(html, /Protected buffer/);
-  assert.match(html, /Estimated debt-free date/);
+  assert.match(html, /See what’s coming\. Clear what’s next\./);
+  assert.match(html, /Dashboard/);
+  assert.match(html, /Debts/);
+  assert.match(html, /Expenses/);
+  assert.match(html, /Activity/);
+  assert.match(html, /Settings/);
+  assert.doesNotMatch(html, /Payday-to-payday|Cash timeline|Lowest projected|Balances &amp; custom payments/);
   assert.match(html, /manifest\.webmanifest/);
   assert.doesNotMatch(html, /Your site is taking shape|react-loading-skeleton|codex-preview/);
 });

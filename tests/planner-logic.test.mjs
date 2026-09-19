@@ -21,6 +21,7 @@ test("payment status is date-aware when an obligation is unpaid", () => {
   assert.equal(getPaymentStatus(0, 1000, 2000, "2026-09-19", today), "due today");
   assert.equal(getPaymentStatus(0, 1000, 2000, "2026-09-21", today), "due soon");
   assert.equal(getPaymentStatus(0, 1000, 2000, "2026-09-30", today), "upcoming");
+  assert.equal(getPaymentStatus(0, 1000, 2000, "2026-09-24", today, 5), "due soon");
 });
 
 test("payoff estimate responds to extra cash and payoff strategy", () => {

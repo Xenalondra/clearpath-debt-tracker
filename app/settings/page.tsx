@@ -1,2 +1,2 @@
 "use client";
-export { default } from "../page";
+export { SettingsPage as default } from "../planner";

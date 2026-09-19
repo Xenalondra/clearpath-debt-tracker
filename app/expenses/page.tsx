@@ -1,2 +1,2 @@
 "use client";
-export { default } from "../page";
+export { ExpensesPage as default } from "../planner";

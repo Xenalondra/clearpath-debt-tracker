@@ -1,2 +1,2 @@
 "use client";
-export { default } from "../page";
+export { ActivityPage as default } from "../planner";
