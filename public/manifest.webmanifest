@@ -1,0 +1,14 @@
+{
+  "name": "Clearpath Debt Planner",
+  "short_name": "Clearpath",
+  "description": "Track monthly obligations and follow a focused debt payoff plan in Philippine pesos.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f3ee",
+  "theme_color": "#202333",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
