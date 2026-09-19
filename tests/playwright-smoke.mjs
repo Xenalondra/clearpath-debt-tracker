@@ -5,7 +5,7 @@ const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage();
 await page.goto("https://clearpath-debt-planner.secretofwings31.chatgpt.site/", { waitUntil: "networkidle" });
 
-await page.getByRole("heading", { name: "Know what’s due. Clear what’s next." }).waitFor();
+await page.getByRole("heading", { name: /Your .* plan/ }).waitFor();
 assert.match(await page.locator("body").innerText(), /Payment checklist/);
 assert.match(await page.locator("body").innerText(), /BALANCE BY CATEGORY/);
 assert.match(await page.locator("body").innerText(), /Protected buffer/);
