@@ -73,7 +73,8 @@ export default function Home() {
   const totalDebt = debts.reduce((sum, item) => sum + item.balance, 0);
   const minimums = debts.reduce((sum, item) => sum + item.minimum, 0);
   const plannedDebt = debts.reduce((sum, item) => sum + item.planned, 0);
-  const fixedExpenses = bills.reduce((sum, item) => sum + item.amount, 0);
+  const activeBills = bills.filter((bill) => bill.type !== "one-time" || bill.month === selectedMonth);
+  const fixedExpenses = activeBills.reduce((sum, item) => sum + (item.actual ?? item.amount), 0);
   const remaining = income - plannedDebt - fixedExpenses;
   const essentialOutflow = fixedExpenses + minimums;
   const safeExtra = calculateSafeExtra(income, fixedExpenses, minimums, cashBuffer);
@@ -152,7 +153,7 @@ export default function Home() {
       <section className="cash-grid">
         <article><span>TOTAL INCOME</span><strong>{money.format(income)}</strong><small>{monthIncomeEntries.length} income source{monthIncomeEntries.length === 1 ? "" : "s"}</small></article>
         <article><span>DEBT PAYMENTS</span><strong>{money.format(plannedDebt)}</strong><small>{money.format(minimums)} minimums</small></article>
-        <article><span>FIXED EXPENSES</span><strong>{money.format(fixedExpenses)}</strong><small>{bills.length} recurring bills</small></article>
+        <article><span>PLANNED EXPENSES</span><strong>{money.format(fixedExpenses)}</strong><small>{activeBills.length} active obligations</small></article>
         <article className={remaining < 0 ? "gap negative" : "gap positive"}><span>{remaining < 0 ? "MONTHLY SHORTFALL" : "MONTHLY SURPLUS"}</span><strong>{money.format(Math.abs(remaining))}</strong><small>{remaining < 0 ? "Reduce payments or expenses" : "Available for your target or savings"}</small></article>
       </section>
 
