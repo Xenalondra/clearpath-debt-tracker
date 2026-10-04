@@ -61,3 +61,10 @@ test("APR projection consistently adds approximate monthly interest before payme
   const debt = { id: 1, balance: 12000, minimum: 1000, planned: 1000, dueDay: 1, rate: 12 };
   assert.equal(projectDebtBalance(debt, "2026-10", "2026-10", []), 11120);
 });
+
+test("dated default payment changes preserve earlier months", () => {
+  const debt = { id: 4, minimum: 1000, planned: 1200, dueDay: 10 };
+  const versions = [{ id: 1, debtId: 4, effectiveFrom: "2026-12", minimum: 1500, planned: 1800, dueDay: 12 }];
+  assert.equal(debtPlanForMonth(debt, "2026-11", [], versions).planned, 1200);
+  assert.deepEqual(debtPlanForMonth(debt, "2026-12", [], versions), { minimum: 1500, planned: 1800, dueDay: 12, isOverride: false });
+});
