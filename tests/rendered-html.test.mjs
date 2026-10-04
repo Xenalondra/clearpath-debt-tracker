@@ -16,15 +16,9 @@ test("server-renders the Clearpath planner", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /Clearpath/);
-  assert.match(html, /Philippine pesos/);
-  assert.match(html, /Payment checklist/);
-  assert.match(html, /SMART PAYMENT PLAN/);
-  assert.match(html, /See what’s coming\. Clear what’s next\./);
-  assert.match(html, /Dashboard/);
-  assert.match(html, /Debts/);
-  assert.match(html, /Expenses/);
-  assert.match(html, /Activity/);
-  assert.match(html, /Settings/);
+  assert.match(html, /Loading Clearpath/);
+  assert.match(html, /aria-busy="true"/);
+  // Date-dependent finance UI is hydrated in the browser, tested by Playwright.
   assert.doesNotMatch(html, /Payday-to-payday|Cash timeline|Lowest projected|Balances &amp; custom payments/);
   assert.match(html, /manifest\.webmanifest/);
   assert.doesNotMatch(html, /Your site is taking shape|react-loading-skeleton|codex-preview/);
