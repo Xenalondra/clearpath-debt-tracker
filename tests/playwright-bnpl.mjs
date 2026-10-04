@@ -49,5 +49,38 @@ assert.equal(await page.getByLabel("Number of upcoming months").inputValue(), "3
 assert.equal(await page.getByLabel("Required due 2").inputValue(), "8000");
 assert.ok((await page.locator("body").evaluate(el => el.scrollWidth <= el.clientWidth)));
 
+const exact = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+await exact.goto(base, { waitUntil: "domcontentloaded" });
+await exact.evaluate(() => {
+  localStorage.setItem("clearpath-plan-v4-php", JSON.stringify({
+    clearpathVersion: 4,
+    debts: [{ id: 16, name: "Test BNPL", category: "BNPL (Pay Later)", variableMonthlyDues: true, balance: 1000, startingBalance: 1000, rate: 0, minimum: 0, planned: 0, dueDay: 16, creditLimit: 0, color: "#93C5FD" }],
+    bills: [], transactions: [], incomeEntries: [], debtPaymentVersions: [],
+    monthlyDueSchedules: [
+      { id: 1, debtId: 16, month: "2026-10", dueAmount: 543, minimumAmount: 543, plannedPayment: 543, dueDay: 16, note: "" },
+      { id: 2, debtId: 16, month: "2026-11", dueAmount: 1234, minimumAmount: 1234, plannedPayment: 1234, dueDay: 16, note: "" },
+      { id: 3, debtId: 16, month: "2026-12", dueAmount: 600, minimumAmount: 600, plannedPayment: 600, dueDay: 16, note: "" },
+      { id: 4, debtId: 16, month: "2027-01", dueAmount: 489.66, minimumAmount: 489.66, plannedPayment: 489.66, dueDay: 16, note: "" },
+    ], cashBuffer: 0, strategy: "avalanche", textSize: "standard", dueSoonThreshold: 3,
+  }));
+});
+await exact.goto(`${base}/debts`, { waitUntil: "domcontentloaded" });
+await exact.getByLabel("Viewing month").fill("2026-12");
+let exactCard = exact.locator(".debt-card").filter({ hasText: "Test BNPL" });
+assert.match(await exactCard.innerText(), /Projected balance by Dec 31[\s\S]*₱489.66[\s\S]*Current balance[\s\S]*₱2,866.66[\s\S]*December planned[\s\S]*₱600[\s\S]*Required ₱600/);
+await exact.getByLabel("Viewing month").fill("2027-01");
+assert.match(await exactCard.innerText(), /Projected balance by Jan 31[\s\S]*₱0[\s\S]*Current balance[\s\S]*₱2,866.66/);
+
+await exact.getByRole("button", { name: "Monthly dues" }).click();
+assert.equal(await exact.getByLabel("Current balance").isVisible(), false);
+assert.match(await exact.locator(".schedule-total").innerText(), /₱2,866.66/);
+await exact.getByLabel("Required due 3").fill("800");
+assert.equal(await exact.getByLabel("Planned payment 3").inputValue(), "800");
+assert.match(await exact.locator(".schedule-total").innerText(), /₱3,066.66/);
+await exact.getByRole("button", { name: "Save changes" }).click();
+await exact.getByLabel("Viewing month").fill("2026-12");
+exactCard = exact.locator(".debt-card").filter({ hasText: "Test BNPL" });
+assert.match(await exactCard.innerText(), /Projected balance by Dec 31[\s\S]*₱489.66[\s\S]*December planned[\s\S]*₱800[\s\S]*Required ₱800/);
+
 console.log("Playwright BNPL source-of-truth checks passed.");
 await browser.close();

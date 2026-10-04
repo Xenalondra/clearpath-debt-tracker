@@ -52,9 +52,9 @@ assert.match(await page.locator(".cash-grid").innerText(), /PROJECTED SAFE TO AL
 await page.goto(`${base}/debts`, { waitUntil: "domcontentloaded" });
 await page.waitForTimeout(500);
 await page.getByLabel("Viewing month").fill("2026-12");
-assert.match(await page.locator(".projection-summary").innerText(), /PROJECTED TOTAL DEBT[\s\S]*₱27,130[\s\S]*CURRENT TOTAL DEBT[\s\S]*₱43,000/);
+assert.match(await page.locator(".projection-summary").innerText(), /PROJECTED TOTAL DEBT[\s\S]*₱0[\s\S]*CURRENT TOTAL DEBT[\s\S]*₱15,870/);
 const lazadaCard = page.locator(".debt-card").filter({ hasText: "Lazada PayLater" });
-assert.match(await lazadaCard.innerText(), /Projected balance by Dec 31[\s\S]*₱27,130[\s\S]*Current balance[\s\S]*₱43,000/);
+assert.match(await lazadaCard.innerText(), /Projected balance by Dec 31[\s\S]*₱0[\s\S]*Current balance[\s\S]*₱15,870/);
 
 await page.getByRole("button", { name: "Monthly dues" }).click();
 await page.getByLabel("Required due 1").fill("8100");

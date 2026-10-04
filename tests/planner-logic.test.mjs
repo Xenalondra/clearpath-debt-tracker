@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculateMinimumGap, calculateSafeExtra, debtPlanForMonth, estimatePayoffMonths, getPaymentStatus, monthSequence, projectDebtBalance } from "../lib/planner-logic.mjs";
+import { calculateMinimumGap, calculateSafeExtra, debtPlanForMonth, estimatePayoffMonths, getBnplScheduledBalance, getPaymentStatus, monthSequence, projectDebtBalance } from "../lib/planner-logic.mjs";
 
 test("safe extra protects fixed expenses, minimums, and buffer", () => {
   assert.equal(calculateSafeExtra(50000, 20000, 15000, 5000), 10000);
@@ -53,7 +53,7 @@ test("0% BNPL projection uses each monthly plan and never mutates current balanc
     { debtId: 7, month: "2026-12", dueAmount: 2900, plannedPayment: 2900 },
   ];
   assert.deepEqual(monthSequence("2026-10", "2026-12"), ["2026-10", "2026-11", "2026-12"]);
-  assert.equal(projectDebtBalance(debt, "2026-10", "2026-12", dues), 27130);
+  assert.equal(projectDebtBalance(debt, "2026-10", "2026-12", dues), 0);
   assert.equal(debt.balance, 43000);
 });
 
@@ -85,9 +85,48 @@ test("variable BNPL projection uses each month's planned payment", () => {
     { debtId: 8, month: "2026-11", minimumAmount: 3200, plannedPayment: 3500 },
     { debtId: 8, month: "2026-12", minimumAmount: 1900, plannedPayment: 1900 },
   ];
-  assert.equal(projectDebtBalance(debt, "2026-10", "2026-10", dues), 6000);
-  assert.equal(projectDebtBalance(debt, "2026-10", "2026-11", dues), 2500);
-  assert.equal(projectDebtBalance(debt, "2026-10", "2026-12", dues), 600);
+  assert.equal(projectDebtBalance(debt, "2026-10", "2026-10", dues), 5100);
+  assert.equal(projectDebtBalance(debt, "2026-10", "2026-11", dues), 1600);
+  assert.equal(projectDebtBalance(debt, "2026-10", "2026-12", dues), 0);
+});
+
+test("reported variable BNPL case derives liability from required dues and reaches zero in January", () => {
+  const debt = { id: 16, category: "BNPL (Pay Later)", variableMonthlyDues: true, balance: 1000, minimum: 0, planned: 0, dueDay: 16, rate: 0 };
+  const dues = [
+    { debtId: 16, month: "2026-10", minimumAmount: 543, plannedPayment: 543 },
+    { debtId: 16, month: "2026-11", minimumAmount: 1234, plannedPayment: 1234 },
+    { debtId: 16, month: "2026-12", minimumAmount: 600, plannedPayment: 600 },
+    { debtId: 16, month: "2027-01", minimumAmount: 489.66, plannedPayment: 489.66 },
+  ];
+  assert.equal(getBnplScheduledBalance(debt, "2026-10", dues), 2866.66);
+  assert.equal(projectDebtBalance(debt, "2026-10", "2026-12", dues), 489.66);
+  assert.equal(projectDebtBalance(debt, "2026-10", "2027-01", dues), 0);
+  assert.equal(debt.balance, 1000);
+});
+
+test("planned override accelerates forecast without changing scheduled liability", () => {
+  const debt = { id: 16, category: "BNPL (Pay Later)", variableMonthlyDues: true, balance: 1000, minimum: 0, planned: 0, dueDay: 16, rate: 0 };
+  const dues = [
+    { debtId: 16, month: "2026-10", minimumAmount: 543, plannedPayment: 543 },
+    { debtId: 16, month: "2026-11", minimumAmount: 1234, plannedPayment: 1500 },
+    { debtId: 16, month: "2026-12", minimumAmount: 600, plannedPayment: 600 },
+    { debtId: 16, month: "2027-01", minimumAmount: 489.66, plannedPayment: 489.66 },
+  ];
+  assert.equal(getBnplScheduledBalance(debt, "2026-10", dues), 2866.66);
+  assert.equal(projectDebtBalance(debt, "2026-10", "2026-12", dues), 223.66);
+});
+
+test("historical dues and current-month actual payments are removed from remaining BNPL liability", () => {
+  const debt = { id: 16, category: "BNPL (Pay Later)", variableMonthlyDues: true, balance: 9999, dueDay: 16, rate: 0 };
+  const dues = [
+    { debtId: 16, month: "2026-10", minimumAmount: 543, plannedPayment: 543 },
+    { debtId: 16, month: "2026-11", minimumAmount: 1234, plannedPayment: 1234 },
+    { debtId: 16, month: "2026-12", minimumAmount: 600, plannedPayment: 600 },
+    { debtId: 16, month: "2027-01", minimumAmount: 489.66, plannedPayment: 489.66 },
+  ];
+  assert.equal(getBnplScheduledBalance(debt, "2026-11", dues), 2323.66);
+  assert.equal(getBnplScheduledBalance(debt, "2026-11", dues, 500), 1823.66);
+  assert.equal(projectDebtBalance(debt, "2026-11", "2026-11", dues, [], 500), 1089.66);
 });
 
 test("APR projection consistently adds approximate monthly interest before payment", () => {
