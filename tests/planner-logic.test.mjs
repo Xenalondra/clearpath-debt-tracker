@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculateMinimumGap, calculateSafeExtra, debtPlanForMonth, estimatePayoffMonths, getBnplScheduledBalance, getPaymentStatus, monthSequence, projectDebtBalance } from "../lib/planner-logic.mjs";
+import { calculateMinimumGap, calculateSafeExtra, debtPlanForMonth, estimatePayoffMonths, getBnplScheduledBalance, getPaymentStatus, monthSequence, projectDebtBalance, projectDebtTimeline, effectiveDebtPlan, migratePaymentModel, historicalBnplCredit } from "../lib/planner-logic.mjs";
 
 test("safe extra protects fixed expenses, minimums, and buffer", () => {
   assert.equal(calculateSafeExtra(50000, 20000, 15000, 5000), 10000);
@@ -42,7 +42,7 @@ test("month-specific dues override defaults without leaking into other months", 
     { id: 2, debtId: 7, month: "2026-11", dueAmount: 5120, minimumAmount: 5120, plannedPayment: 5120, dueDay: 18 },
   ];
   assert.deepEqual(debtPlanForMonth(debt, "2026-10", dues), { minimum: 7850, planned: 7850, dueDay: 18, isOverride: true });
-  assert.deepEqual(debtPlanForMonth(debt, "2026-12", dues), { minimum: 5000, planned: 5000, dueDay: 18, isOverride: false });
+  assert.deepEqual(debtPlanForMonth(debt, "2026-12", dues), { minimum: 0, planned: 0, dueDay: 18, isOverride: false });
 });
 
 test("0% BNPL projection uses each monthly plan and never mutates current balance", () => {
@@ -60,10 +60,10 @@ test("0% BNPL projection uses each monthly plan and never mutates current balanc
 test("fixed BNPL mode ignores archived monthly rows", () => {
   const debt = { id: 7, category: "BNPL (Pay Later)", variableMonthlyDues: false, minimum: 3600, planned: 4000, dueDay: 18 };
   const dues = [{ debtId: 7, month: "2026-11", minimumAmount: 8000, plannedPayment: 9000, dueDay: 18 }];
-  assert.deepEqual(debtPlanForMonth(debt, "2026-11", dues), { minimum: 3600, planned: 4000, dueDay: 18, isOverride: false });
+  assert.deepEqual(debtPlanForMonth(debt, "2026-11", dues), { minimum: 3600, planned: 3600, dueDay: 18, isOverride: false });
 });
 
-test("variable BNPL required and planned values are resolved independently", () => {
+test("variable BNPL default payment equals required due", () => {
   const debt = { id: 7, category: "BNPL (Pay Later)", variableMonthlyDues: true, minimum: 3000, planned: 3000, dueDay: 18 };
   const dues = [
     { debtId: 7, month: "2026-10", minimumAmount: 4000, plannedPayment: 4000, dueDay: 18 },
@@ -71,7 +71,7 @@ test("variable BNPL required and planned values are resolved independently", () 
     { debtId: 7, month: "2026-12", minimumAmount: 1900, plannedPayment: 1900, dueDay: 18 },
   ];
   assert.equal(debtPlanForMonth(debt, "2026-11", dues).minimum, 3200);
-  assert.equal(debtPlanForMonth(debt, "2026-11", dues).planned, 3500);
+  assert.equal(debtPlanForMonth(debt, "2026-11", dues).planned, 3200);
   dues[1].minimumAmount = 3700;
   assert.equal(debtPlanForMonth(debt, "2026-10", dues).minimum, 4000);
   assert.equal(debtPlanForMonth(debt, "2026-11", dues).minimum, 3700);
@@ -86,7 +86,7 @@ test("variable BNPL projection uses each month's planned payment", () => {
     { debtId: 8, month: "2026-12", minimumAmount: 1900, plannedPayment: 1900 },
   ];
   assert.equal(projectDebtBalance(debt, "2026-10", "2026-10", dues), 5100);
-  assert.equal(projectDebtBalance(debt, "2026-10", "2026-11", dues), 1600);
+  assert.equal(projectDebtBalance(debt, "2026-10", "2026-11", dues), 1900);
   assert.equal(projectDebtBalance(debt, "2026-10", "2026-12", dues), 0);
 });
 
@@ -104,7 +104,7 @@ test("reported variable BNPL case derives liability from required dues and reach
   assert.equal(debt.balance, 1000);
 });
 
-test("planned override accelerates forecast without changing scheduled liability", () => {
+test("obsolete planned override does not change forecast", () => {
   const debt = { id: 16, category: "BNPL (Pay Later)", variableMonthlyDues: true, balance: 1000, minimum: 0, planned: 0, dueDay: 16, rate: 0 };
   const dues = [
     { debtId: 16, month: "2026-10", minimumAmount: 543, plannedPayment: 543 },
@@ -113,7 +113,7 @@ test("planned override accelerates forecast without changing scheduled liability
     { debtId: 16, month: "2027-01", minimumAmount: 489.66, plannedPayment: 489.66 },
   ];
   assert.equal(getBnplScheduledBalance(debt, "2026-10", dues), 2866.66);
-  assert.equal(projectDebtBalance(debt, "2026-10", "2026-12", dues), 223.66);
+  assert.equal(projectDebtBalance(debt, "2026-10", "2026-12", dues), 489.66);
 });
 
 test("historical dues and current-month actual payments are removed from remaining BNPL liability", () => {
@@ -137,6 +137,42 @@ test("APR projection consistently adds approximate monthly interest before payme
 test("dated default payment changes preserve earlier months", () => {
   const debt = { id: 4, minimum: 1000, planned: 1200, dueDay: 10 };
   const versions = [{ id: 1, debtId: 4, effectiveFrom: "2026-12", minimum: 1500, planned: 1800, dueDay: 12 }];
-  assert.equal(debtPlanForMonth(debt, "2026-11", [], versions).planned, 1200);
-  assert.deepEqual(debtPlanForMonth(debt, "2026-12", [], versions), { minimum: 1500, planned: 1800, dueDay: 12, isOverride: false });
+  assert.equal(debtPlanForMonth(debt, "2026-11", [], versions).planned, 1000);
+  assert.deepEqual(debtPlanForMonth(debt, "2026-12", [], versions), { minimum: 1500, planned: 1500, dueDay: 12, isOverride: false });
+});
+
+test("final payment is capped and following months have no effective obligation",()=>{
+ const debt={id:1,balance:3000,minimum:9250,rate:0};
+ const timeline=projectDebtTimeline(debt,"2026-10","2026-12");
+ assert.deepEqual(timeline.map(row=>row.payment),[3000,0,0]);
+ assert.equal(effectiveDebtPlan(debt,"2026-11","2026-10").minimum,0);
+ assert.equal(debt.balance,3000);
+});
+test("legacy planned-only data migrates safely while required values take precedence",()=>{
+ const result=migratePaymentModel({debts:[{id:1,minimum:4750,planned:9000},{id:2,minimum:0,planned:1234}],monthlyDueSchedules:[{debtId:2,month:"2026-11",dueAmount:0,plannedPayment:600}]});
+ assert.equal(result.debts[0].minimum,4750);
+ assert.equal(result.debts[1].minimum,1234);
+ assert.equal(result.monthlyDueSchedules[0].dueAmount,600);
+ assert.equal("planned" in result.debts[0],false);
+ assert.equal("plannedPayment" in result.monthlyDueSchedules[0],false);
+});
+test("actual partial and extra BNPL payments deduct once without changing monthly dues",()=>{
+ const debt={id:1,category:"BNPL (Pay Later)",variableMonthlyDues:true,rate:0};
+ const dues=[{debtId:1,month:"2026-10",dueAmount:1234},{debtId:1,month:"2026-11",dueAmount:600}];
+ assert.equal(getBnplScheduledBalance(debt,"2026-10",dues,1500),334);
+ assert.equal(projectDebtBalance(debt,"2026-10","2026-10",dues,[],500),600);
+ assert.equal(dues[0].dueAmount,1234);
+});
+test("actual BNPL overpayment carries forward when its payment month becomes historical",()=>{
+ const debt={id:1,category:"BNPL (Pay Later)",variableMonthlyDues:true};
+ const dues=[{debtId:1,month:"2026-10",dueAmount:1234},{debtId:1,month:"2026-11",dueAmount:600}];
+ const transactions=[{debtId:1,kind:"payment",date:"2026-10-15",amount:1500}];
+ const credit=historicalBnplCredit(debt,"2026-11",dues,transactions);
+ assert.equal(credit,266);assert.equal(getBnplScheduledBalance(debt,"2026-11",dues,credit),334);
+});
+test("new BNPL charges enter liability once and disappear from pending charges when reconciled to schedule",()=>{
+ const debt={id:1,category:"BNPL (Pay Later)",variableMonthlyDues:true,unscheduledCharges:1200};
+ const dues=[{debtId:1,month:"2026-11",dueAmount:600}];
+ assert.equal(getBnplScheduledBalance(debt,"2026-11",dues),1800);
+ assert.equal(getBnplScheduledBalance({...debt,unscheduledCharges:0},"2026-11",[{...dues[0],dueAmount:1800}]),1800);
 });

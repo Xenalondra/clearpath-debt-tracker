@@ -51,7 +51,7 @@ await addIncome("Bonus", "10000", "2026-09-30");
 assert.equal(await incomeTotal.innerText(), "₱48,300");
 const bonusCard = page.locator(".income-chip").filter({ hasText: "Bonus" });
 await bonusCard.getByRole("button", { name: /Income actions/ }).click();
-await bonusCard.getByRole("button", { name: "Edit" }).click();
+await page.getByRole("menuitem", { name: "Edit" }).click();
 assert.equal(await page.getByLabel("Income type").inputValue(), "Bonus");
 assert.equal(await page.getByLabel("Recurrence").inputValue(), "one-time");
 await page.getByLabel("Expected amount").fill("12000");
@@ -61,7 +61,7 @@ assert.equal(await incomeTotal.innerText(), "₱50,300");
 const editedBonus = page.locator(".income-chip").filter({ hasText: "Bonus" });
 await editedBonus.getByRole("button", { name: /Income actions/ }).click();
 page.once("dialog", dialog => dialog.accept());
-await editedBonus.getByRole("button", { name: "Delete" }).click();
+await page.getByRole("menuitem", { name: "Delete" }).click();
 assert.equal(await page.locator(".income-chip").filter({ hasText: "Bonus" }).count(), 0);
 assert.equal(await incomeTotal.innerText(), "₱38,300");
 

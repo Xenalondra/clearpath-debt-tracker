@@ -12,7 +12,7 @@ await page.addInitScript(() => {
 });
 
 await page.goto(base, { waitUntil: "domcontentloaded" });
-await page.getByRole("heading", { name: "See what’s coming. Clear what’s next." }).waitFor();
+await page.getByText("See what’s coming. Clear what’s next.", {exact:false}).waitFor();
 await page.waitForTimeout(750);
 const nav = page.getByRole("navigation", { name: "Main navigation" });
 for (const label of ["Dashboard", "Debts", "Expenses", "Activity", "Settings"]) assert.equal(await nav.getByText(label, { exact: true }).count(), 1);
@@ -25,8 +25,8 @@ await debtCheckbox.click();
 await page.getByText(/payment recorded for Student Loan/).waitFor();
 assert.equal(await page.getByRole("button", { name: "Paid Student Loan" }).getAttribute("aria-pressed"), "true");
 assert.match(await page.locator("#month").innerText(), /1 paid · 6 still due/);
-await page.locator('summary[aria-label="More actions for Visa Platinum"]').click();
-await page.getByRole("button", { name: "Pay different amount" }).click();
+await page.getByLabel("More actions for Visa Platinum").click();
+await page.getByRole("menuitem", { name: "Pay different amount" }).click();
 await page.getByLabel("Amount").fill("2000");
 await page.getByRole("button", { name: "Record payment" }).click();
 await page.getByText(/₱2,000 payment recorded for Visa Platinum/).waitFor();
@@ -40,8 +40,8 @@ await page.getByLabel("Debt name").fill("Test Debt");
 await page.getByLabel("Current balance").fill("20000");
 await page.getByLabel("APR / rate (%)").fill("10");
 await page.getByLabel("Due day").fill("25");
-await page.getByLabel("Minimum payment").fill("1000");
-await page.getByLabel("Planned payment").fill("1500");
+await page.getByLabel("Monthly payment", {exact:true}).fill("1000");
+
 await page.getByRole("button", { name: "Add to plan" }).click();
 await page.getByText("Test Debt", { exact: true }).waitFor();
 await page.getByRole("button", { name: "Record activity" }).first().click();
@@ -60,7 +60,8 @@ for (const [kind, amount, expected] of [["interest", "500", /₱143,500/], ["fee
 await page.getByRole("button", { name: "Edit debt" }).first().click();
 assert.ok(await page.getByRole("heading", { name: "Edit debt" }).isVisible());
 await page.getByRole("button", { name: "Close" }).click();
-await page.getByRole("button", { name: "Reconcile balance" }).first().click();
+await page.getByLabel("Debt actions for Visa Platinum").click();
+await page.getByRole("menuitem", {name:"Reconcile balance"}).click();
 await page.getByLabel("Actual lender balance").fill("143000");
 await page.getByLabel("Reason").fill("Matched test statement");
 await page.getByRole("dialog").getByRole("button", { name: "Reconcile balance" }).click();

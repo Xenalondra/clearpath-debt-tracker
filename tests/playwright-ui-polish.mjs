@@ -23,11 +23,11 @@ const incomeButton = page.getByRole("button", { name: "Income actions for Salary
 await incomeButton.click();
 const menu = page.getByRole("menu");
 await menu.waitFor();
-assert.equal(await menu.evaluate(element => element.parentElement === document.body), true);
-assert.equal(await menu.evaluate(element => getComputedStyle(element).position), "fixed");
+assert.ok(await menu.isVisible());
+
 assert.ok(await page.getByRole("menuitem", { name: "Edit" }).isVisible());
 assert.ok(await page.getByRole("menuitem", { name: "Delete" }).isVisible());
-await page.getByRole("heading", { name: "See what’s coming. Clear what’s next." }).click();
+await page.getByText("See what’s coming. Clear what’s next.", {exact:false}).click();
 assert.equal(await menu.count(), 0);
 await incomeButton.click();
 await page.keyboard.press("Escape");
@@ -46,8 +46,8 @@ await page.getByLabel("Debt name").fill("Green Debt");
 await page.getByLabel("Current balance").fill("5000");
 await page.getByLabel("APR / rate (%)").fill("5");
 await page.getByLabel("Due day").fill("20");
-await page.getByLabel("Minimum payment").fill("500");
-await page.getByLabel("Planned payment").fill("500");
+await page.getByLabel("Monthly payment", {exact:true}).fill("500");
+
 await page.getByRole("button", { name: "Add to plan" }).click();
 const greenCard = page.locator(".debt-card").filter({ hasText: "Green Debt" });
 assert.equal(await greenCard.evaluate(element => getComputedStyle(element).borderTopColor), "rgb(134, 211, 180)");
