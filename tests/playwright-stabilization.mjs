@@ -7,7 +7,7 @@ page.on("pageerror",error=>{throw error;});
 const month=new Date().toISOString().slice(0,7);
 const nextMonth=(offset)=>{const date=new Date(`${month}-02T12:00:00Z`);date.setUTCMonth(date.getUTCMonth()+offset);return date.toISOString().slice(0,7);};
 async function state(){return page.evaluate(()=>JSON.parse(localStorage.getItem("clearpath-plan-v4-php")));}
-async function go(path=""){await page.goto(base+path);await page.waitForTimeout(250);}
+async function go(path=""){await page.goto(base+path);await page.getByRole("navigation",{name:"Main navigation"}).waitFor();await page.waitForFunction(()=>localStorage.getItem("clearpath-plan-v4-php")!==null);await page.waitForTimeout(250);}
 await go();await page.evaluate(()=>localStorage.setItem("clearpath-plan-v4-php",JSON.stringify({clearpathVersion:5,debts:[],bills:[],incomeEntries:[],transactions:[],monthlyDueSchedules:[],cashBuffer:0,strategy:"avalanche"})));await go("/debts");
 await page.getByRole("button",{name:/Add debt/}).click();
 let dialog=page.getByRole("dialog");
