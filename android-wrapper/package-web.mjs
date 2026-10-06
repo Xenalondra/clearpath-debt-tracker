@@ -22,6 +22,6 @@ for(const route of routes){
 // caches must not replace this version; localStorage is deliberately untouched.
 await writeFile(path.join(target,"sw.js"),`self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.registration.unregister()));`);
 async function files(dir){const list=[];for(const entry of await readdir(dir,{withFileTypes:true})){const name=path.join(dir,entry.name);if(entry.isDirectory())list.push(...await files(name));else list.push(name);}return list.sort();}
-const assets={};for(const file of await files(target))assets[path.relative(target,file)]=createHash("sha256").update(await readFile(file)).digest("hex");
+const assets={};for(const file of await files(target)){const relative=path.relative(target,file);if(relative.split(path.sep).some(part=>part.startsWith(".")))continue;assets[relative]=createHash("sha256").update(await readFile(file)).digest("hex");}
 await writeFile(path.join(target,"build-info.json"),JSON.stringify({commit,builtAt:new Date().toISOString(),routes,assets},null,2));
 console.log(`Packaged ${Object.keys(assets).length} fresh assets and ${routes.length} routes from ${commit}`);
