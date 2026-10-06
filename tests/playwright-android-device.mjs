@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { chromium } from "playwright";
+import { _android } from "playwright";
 import { readFile } from "node:fs/promises";
-const browser=await chromium.connectOverCDP("http://127.0.0.1:9223");
-const page=browser.contexts()[0].pages()[0];assert.ok(page,"Clearpath WebView must be open");
+const devices=await _android.devices();const device=devices.find(item=>item.serial()==="emulator-5554");assert.ok(device,"Existing emulator must be available");
+const webview=await device.webView({pkg:"io.clearpath.app"});const page=await webview.page();
 const errors=[];page.on("pageerror",error=>errors.push(error.message));
 const origin="https://clearpath-debt-planner.secretofwings31.chatgpt.site",key="clearpath-plan-v4-php";
 await page.getByRole("navigation",{name:"Main navigation"}).waitFor();
@@ -21,4 +21,4 @@ try{
  await page.goto(origin+"/activity");assert.match(await page.locator(".activity-row").innerText(),/−₱2,866.66/);assert.deepEqual(errors,[]);
 }finally{await page.evaluate(({key,original})=>{if(original===null)localStorage.removeItem(key);else localStorage.setItem(key,original);},{key,original});await page.goto(origin);}
 console.log("PASS: native Android WebView launch, exact bundled commit, offline routes, mobile layout, analytics controls, BNPL full payoff, Completed, Activity and local-data preservation.");
-await browser.close();
+await device.close();

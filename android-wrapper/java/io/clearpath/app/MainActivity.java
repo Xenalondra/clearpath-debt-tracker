@@ -14,6 +14,7 @@ import android.webkit.ServiceWorkerClient;
 import java.io.IOException;
 import java.util.Collections;
 import android.widget.TextView;
+import android.widget.FrameLayout;
 
 public class MainActivity extends Activity {
   private static final String APP_URL = "https://clearpath-debt-planner.secretofwings31.chatgpt.site/";
@@ -52,7 +53,16 @@ public class MainActivity extends Activity {
         if (failingUrl != null && failingUrl.equals(APP_URL)) showOfflineMessage();
       }
     });
-    setContentView(webView);
+    FrameLayout container = new FrameLayout(this);
+    container.setBackgroundColor(Color.rgb(32, 35, 51));
+    // Target SDK 35 enables edge-to-edge; keep web controls clear of system bars.
+    container.setOnApplyWindowInsetsListener((view, insets) -> {
+      view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
+          insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
+      return insets;
+    });
+    container.addView(webView, new FrameLayout.LayoutParams(-1, -1));
+    setContentView(container);
     webView.loadUrl(APP_URL);
   }
 
