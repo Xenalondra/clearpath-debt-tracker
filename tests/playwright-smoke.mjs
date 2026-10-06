@@ -43,7 +43,7 @@ await page.getByLabel("Due day").fill("25");
 await page.getByLabel("Monthly payment", {exact:true}).fill("1000");
 
 await page.getByRole("button", { name: "Add to plan" }).click();
-await page.getByText("Test Debt", { exact: true }).waitFor();
+await page.locator(".debt-card").getByText("Test Debt", { exact: true }).waitFor();
 await page.getByRole("button", { name: "Record activity" }).first().click();
 assert.deepEqual(await page.locator('select[name="kind"] option').allTextContents(), ["New purchase / new borrowing", "Interest charged", "Fee charged"]);
 await page.getByLabel("Amount").fill("3000");

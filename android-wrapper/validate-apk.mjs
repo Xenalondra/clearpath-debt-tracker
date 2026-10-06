@@ -1,0 +1,17 @@
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readFile, stat } from "node:fs/promises";
+import path from "node:path";
+const root=path.resolve(import.meta.dirname,"..");
+const apk=path.resolve(process.argv[2]||path.join(root,"android-wrapper/output/Clearpath-Debt-Planner-v1.1-debug.apk"));
+assert.ok((await stat(apk)).size>0);
+const extract=name=>execFileSync("unzip",["-p",apk,"assets/web/"+name],{maxBuffer:20*1024*1024});
+const info=JSON.parse(extract("build-info.json").toString());
+const commit=execFileSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).trim();assert.equal(info.commit,commit);
+for(const [name,digest] of Object.entries(info.assets))assert.equal(createHash("sha256").update(extract(name)).digest("hex"),digest,name);
+for(const route of info.routes)assert.ok(extract(route==="/"?"index.html":route.slice(1)+"/index.html").toString().includes(commit));
+const chunks=Object.keys(info.assets).filter(name=>name.endsWith(".js")&&name.startsWith("_next/"));
+for(const name of chunks)assert.equal(createHash("sha256").update(await readFile(path.join(root,"dist/client",name))).digest("hex"),info.assets[name],"APK must match the fresh production JS");
+assert.ok(chunks.some(name=>extract(name).toString().includes("Where your debt sits")),"Latest visual upgrade must be in the APK");
+console.log(`PASS: APK exists, ${Object.keys(info.assets).length} assets verified, ${info.routes.length} bundled routes, fresh production chunks and source ${commit}`);
