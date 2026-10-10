@@ -15,7 +15,7 @@ async function create(){
  await form.getByLabel("Debt name").fill("Payoff BNPL");await form.getByLabel("Debt category").selectOption("BNPL (Pay Later)");await form.getByRole("radio",{name:"Monthly amounts vary"}).click();
  await form.getByLabel("Due day").fill("18");await form.getByLabel("Number of upcoming months").fill("4");await form.getByLabel("Number of upcoming months").press("Tab");
  for(const [index,value] of [543,1234,600,489.66].entries())await form.getByLabel(`Due amount ${index+1}`,{exact:true}).fill(String(value));
- await form.getByRole("button",{name:"Add to plan"}).click();await page.waitForTimeout(300);
+ await form.getByRole("button",{name:"Add debt"}).click();await page.waitForTimeout(300);
  const saved=await state();assert.equal(saved.debts[0].startingBalance,2866.66);assert.equal(saved.debts[0].originalStartingBalance,2866.66);
  assert.deepEqual(saved.monthlyDueSchedules.map(row=>row.month),months);await go();
 }
@@ -50,9 +50,9 @@ assert.equal((await state()).transactions.length,1);let activity=await completed
 await create();await menu();await page.getByRole("menuitem",{name:"Pay minimum",exact:true}).click();await page.waitForTimeout(300);assert.equal((await state()).transactions[0].amount,543);
 await full("2,323.66");assert.deepEqual((await state()).transactions.map(t=>t.amount),[2323.66,543]);activity=await completed(2866.66);assert.ok(activity.some(text=>text.includes("−₱543")));assert.ok(activity.some(text=>text.includes("−₱2,323.66")));
 // Snapshot survives schedule editing and later actual borrowing.
-await create();await go("/debts");await page.getByRole("button",{name:"Edit debt",exact:true}).click();await page.getByRole("dialog").getByLabel("Due amount 2",{exact:true}).fill("1334");await page.getByRole("dialog").getByRole("button",{name:"Save changes"}).click();
+await create();await go("/debts");await page.getByRole("button",{name:"Edit debt",exact:true}).click();await page.getByRole("dialog").getByLabel("Due amount 2",{exact:true}).fill("1334");await page.getByRole("dialog").getByRole("button",{name:"Save debt"}).click();
 assert.equal((await state()).debts[0].originalStartingBalance,2866.66);assert.equal((await state()).monthlyDueSchedules[1].dueAmount,1334);
-await page.getByRole("button",{name:"Edit debt",exact:true}).click();await page.getByRole("dialog").getByLabel("Due amount 2",{exact:true}).fill("1234");await page.getByRole("dialog").getByRole("button",{name:"Save changes"}).click();
+await page.getByRole("button",{name:"Edit debt",exact:true}).click();await page.getByRole("dialog").getByLabel("Due amount 2",{exact:true}).fill("1234");await page.getByRole("dialog").getByRole("button",{name:"Save debt"}).click();
 assert.equal((await state()).debts[0].originalStartingBalance,2866.66);
 await page.getByRole("button",{name:"Record activity",exact:true}).click();await page.getByRole("dialog").getByLabel("Amount",{exact:true}).fill("1000");await page.getByRole("dialog").getByRole("button",{name:"Record activity",exact:true}).click();
 await go();await different(5000);assert.equal((await state()).transactions.filter(t=>t.kind==="payment").length,0);assert.match(await page.getByRole("status").innerText(),/exceeds/);

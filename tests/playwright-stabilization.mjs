@@ -18,11 +18,11 @@ await dialog.getByLabel("Current balance").fill("100000");
 await dialog.getByLabel("Monthly payment",{exact:true}).fill("9250");
 await dialog.getByLabel("Due day").fill("16");
 await dialog.getByLabel("APR / rate (%)").fill("0");
-await dialog.getByRole("button",{name:"Add to plan"}).click();
+await dialog.getByRole("button",{name:"Add debt"}).click();
 await dialog.waitFor({state:"hidden"});assert.equal((await state()).debts.length,1);
 await go("/debts");assert.match(await page.locator(".debt-card").innerText(),/Personal Loan Test/);
-await page.locator(".debt-card").getByRole("button",{name:"Edit debt"}).click();dialog=page.getByRole("dialog");const savedZero=dialog.getByLabel("APR / rate (%)");assert.equal(await savedZero.inputValue(),"0");await savedZero.focus();await savedZero.pressSequentially("12.50");assert.equal(await savedZero.inputValue(),"12.50");await dialog.getByRole("button",{name:"Save changes"}).click();assert.equal((await state()).debts[0].rate,12.5);
-await page.getByRole("button",{name:/Add debt/}).click();dialog=page.getByRole("dialog");await dialog.getByLabel("Debt name").fill("Fixed BNPL");await dialog.getByLabel("Debt category").selectOption("BNPL (Pay Later)");assert.equal(await dialog.locator(".schedule-row").count(),0);await dialog.getByLabel("Current balance").fill("5000");await dialog.getByLabel("Monthly due",{exact:true}).fill("3600");await dialog.getByLabel("Due day").fill("18");await dialog.getByRole("button",{name:"Add to plan"}).click();assert.equal((await state()).debts.length,2);await page.getByLabel("Debt actions for Fixed BNPL").click();await page.getByRole("menuitem",{name:"Delete debt"}).click();await page.getByRole("dialog").getByRole("button",{name:"Delete debt"}).click();
+await page.locator(".debt-card").getByRole("button",{name:"Edit debt"}).click();dialog=page.getByRole("dialog");const savedZero=dialog.getByLabel("APR / rate (%)");assert.equal(await savedZero.inputValue(),"0");await savedZero.focus();await savedZero.pressSequentially("12.50");assert.equal(await savedZero.inputValue(),"12.50");await dialog.getByRole("button",{name:"Save debt"}).click();assert.equal((await state()).debts[0].rate,12.5);
+await page.getByRole("button",{name:/Add debt/}).click();dialog=page.getByRole("dialog");await dialog.getByLabel("Debt name").fill("Fixed BNPL");await dialog.getByLabel("Debt category").selectOption("BNPL (Pay Later)");assert.equal(await dialog.locator(".schedule-row").count(),0);await dialog.getByLabel("Current balance").fill("5000");await dialog.getByLabel("Monthly due",{exact:true}).fill("3600");await dialog.getByLabel("Due day").fill("18");await dialog.getByRole("button",{name:"Add debt"}).click();assert.equal((await state()).debts.length,2);await page.getByLabel("Debt actions for Fixed BNPL").click();await page.getByRole("menuitem",{name:"Delete debt"}).click();await page.getByRole("dialog").getByRole("button",{name:"Delete debt"}).click();
 await page.getByRole("button",{name:/Add debt/}).click();dialog=page.getByRole("dialog");
 await dialog.getByLabel("Debt name").fill("Test BNPL");await dialog.getByLabel("Debt category").selectOption("BNPL (Pay Later)");
 await dialog.getByRole("radio",{name:"Monthly amounts vary"}).click();
@@ -35,7 +35,7 @@ for(const [index,amount] of ["2990","1234","789"].entries()){const field=dialog.
 assert.match(await dialog.locator(".scheduled-balance").innerText(),/₱5,013/);
 await dialog.getByRole("button",{name:/Add month/}).click();assert.equal(await count.inputValue(),"4");assert.match(await dialog.locator(".schedule-row").last().innerText(),new RegExp(new Date(`${nextMonth(3)}-02`).toLocaleDateString("en-PH",{month:"long",year:"numeric"})));
 await dialog.getByLabel("Due amount 4").fill("0");
-await dialog.getByRole("button",{name:"Add to plan"}).click();await dialog.waitFor({state:"hidden"});
+await dialog.getByRole("button",{name:"Add debt"}).click();await dialog.waitFor({state:"hidden"});
 assert.equal((await state()).debts.length,2);assert.equal((await state()).monthlyDueSchedules.length,4);assert.ok((await state()).monthlyDueSchedules.every(row=>!("plannedPayment" in row)));
 await go();for(const [offset,amount] of [[0,"₱2,990"],[1,"₱1,234"],[2,"₱789"]]){await page.getByLabel("Viewing month").fill(nextMonth(offset));assert.match(await page.locator(".check-row").filter({hasText:"Test BNPL"}).innerText(),new RegExp(amount.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));}
 await page.getByLabel("Viewing month").fill(month);

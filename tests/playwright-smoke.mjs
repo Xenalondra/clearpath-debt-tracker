@@ -27,14 +27,14 @@ assert.equal(await page.getByRole("button", { name: "Paid Student Loan" }).getAt
 assert.match(await page.locator("#month").innerText(), /1 paid · 6 still due/);
 await page.getByLabel("More actions for Visa Platinum").click();
 await page.getByRole("menuitem", { name: "Pay different amount" }).click();
-await page.getByLabel("Amount").fill("2000");
+await page.getByLabel("Amount",{exact:true}).fill("2000");
 await page.getByRole("button", { name: "Record payment" }).click();
 await page.getByText(/₱2,000 payment recorded for Visa Platinum/).waitFor();
 
 await page.goto(`${base}/debts`, { waitUntil: "domcontentloaded" });
 await page.waitForTimeout(750);
 await page.getByRole("button", { name: /Add debt/ }).click();
-await page.getByRole("heading", { name: "Add a debt" }).waitFor();
+await page.getByRole("heading", { name: "Add debt" }).waitFor();
 assert.ok(await page.locator('input[name="name"]').isVisible());
 await page.getByLabel("Debt name").fill("Test Debt");
 await page.getByLabel("Current balance").fill("20000");
@@ -42,18 +42,18 @@ await page.getByLabel("APR / rate (%)").fill("10");
 await page.getByLabel("Due day").fill("25");
 await page.getByLabel("Monthly payment", {exact:true}).fill("1000");
 
-await page.getByRole("button", { name: "Add to plan" }).click();
+await page.getByRole("dialog").getByRole("button", { name: "Add debt" }).click();
 await page.locator(".debt-card").getByText("Test Debt", { exact: true }).waitFor();
 await page.getByRole("button", { name: "Record activity" }).first().click();
 assert.deepEqual(await page.locator('select[name="kind"] option').allTextContents(), ["New purchase / new borrowing", "Interest charged", "Fee charged"]);
-await page.getByLabel("Amount").fill("3000");
+await page.getByLabel("Amount",{exact:true}).fill("3000");
 await page.getByLabel("Note (optional)").fill("Test borrowing");
 await page.getByRole("dialog").getByRole("button", { name: "Record activity" }).click();
 assert.match(await page.locator(".debt-card").first().innerText(), /₱143,000/);
 for (const [kind, amount, expected] of [["interest", "500", /₱143,500/], ["fee", "200", /₱143,700/]]) {
   await page.getByRole("button", { name: "Record activity" }).first().click();
   await page.getByLabel("Activity type").selectOption(kind);
-  await page.getByLabel("Amount").fill(amount);
+  await page.getByLabel("Amount",{exact:true}).fill(amount);
   await page.getByRole("dialog").getByRole("button", { name: "Record activity" }).click();
   assert.match(await page.locator(".debt-card").first().innerText(), expected);
 }
@@ -75,7 +75,7 @@ await page.getByLabel("Name").fill("Test Internet");
 await page.getByLabel("Due day").fill("20");
 await page.getByLabel("Budget / expected amount").fill("1699");
 await page.getByLabel("Category").selectOption({ label: "Utilities" });
-await page.getByRole("button", { name: "Save expense" }).click();
+await page.getByRole("button", { name: "Add expense" }).click();
 await page.getByText("Test Internet", { exact: true }).waitFor();
 const testExpense = page.locator(".expense-row").filter({ hasText: "Test Internet" });
 await testExpense.getByRole("button", { name: "Edit" }).click();

@@ -48,22 +48,22 @@ await page.getByLabel("APR / rate (%)").fill("5");
 await page.getByLabel("Due day").fill("20");
 await page.getByLabel("Monthly payment", {exact:true}).fill("500");
 
-await page.getByRole("button", { name: "Add to plan" }).click();
+await page.getByRole("dialog").getByRole("button", { name: "Add debt" }).click();
 const greenCard = page.locator(".debt-card").filter({ hasText: "Green Debt" });
 assert.equal(await greenCard.evaluate(element => getComputedStyle(element).borderTopColor), "rgb(134, 211, 180)");
 
 const customCard = page.locator(".debt-card").filter({ hasText: "Custom Debt" });
 await customCard.getByRole("button", { name: "Edit debt" }).click();
-assert.equal(await page.getByRole("button", { name: "＋ Custom color" }).getAttribute("aria-pressed"), "true");
+assert.equal(await page.getByRole("button", { name: "Custom color" }).getAttribute("aria-pressed"), "true");
 assert.equal(await page.getByLabel("Hex color").inputValue(), "#123456");
 await page.getByRole("button", { name: "Pastel violet" }).click();
-await page.getByRole("button", { name: "Save changes" }).click();
+await page.getByRole("button", { name: "Save debt" }).click();
 assert.equal(await customCard.evaluate(element => getComputedStyle(element).borderTopColor), "rgb(167, 139, 250)");
 
 await greenCard.getByRole("button", { name: "Edit debt" }).click();
-await page.getByRole("button", { name: "＋ Custom color" }).click();
+await page.getByRole("button", { name: "Custom color" }).click();
 await page.getByLabel("Hex color").fill("#ABCDEF");
-await page.getByRole("button", { name: "Save changes" }).click();
+await page.getByRole("button", { name: "Save debt" }).click();
 assert.equal(await greenCard.evaluate(element => getComputedStyle(element).borderTopColor), "rgb(171, 205, 239)");
 await page.reload({ waitUntil: "domcontentloaded" });
 await page.waitForTimeout(500);

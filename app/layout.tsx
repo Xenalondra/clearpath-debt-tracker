@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import "./design-system.css";
 import { PlannerProvider } from "./planner";
 
 const geistSans = Geist({
@@ -14,6 +15,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = { width:"device-width", initialScale:1, viewportFit:"cover", themeColor:"#202333" };
+
 export async function generateMetadata(): Promise<Metadata> {
   const incoming = await headers();
   const host = incoming.get("host") ?? "localhost:3001";
@@ -23,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(origin),
     title: "Clearpath — Debt Planner in Philippine Pesos",
     description: "An installable monthly debt payoff and obligations planner in Philippine pesos.",
-    icons: { icon: "/favicon.svg", shortcut: "/favicon.svg", apple: "/favicon.svg" },
+    icons: { icon: "/favicon.svg", shortcut: "/favicon.svg", apple: "/icons/apple-touch-icon.png" },
     manifest: "/manifest.webmanifest",
     applicationName: "Clearpath",
     appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Clearpath" },

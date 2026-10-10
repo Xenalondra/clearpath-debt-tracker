@@ -1,0 +1,76 @@
+/* Clearpath's shared app tokens. Existing finance views consume these aliases. */
+:root {
+ --background:#f6f4ef; --surface:#fffefa; --surface-subtle:#f3f1ec;
+ --primary:#7057d9; --text-primary:#20283a; --text-secondary:#687083;
+ --border:#e2ddd4; --success:#2f8f72; --warning:#b77924; --danger:#c85f52;
+ --nav:#202333; --debt-violet:#A78BFA; --debt-mint:#86D3B4; --debt-peach:#F3B66A; --debt-blue:#93C5FD; --debt-rose:#F4A6B8;
+ --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-6:24px; --space-8:32px;
+ --page-padding:clamp(24px,4vw,56px); --section-gap:24px; --card-padding:24px; --control-gap:8px; --modal-padding:24px;
+ --radius-button:10px; --radius-input:10px; --radius-card:18px; --radius-sheet:22px;
+ --radius-sm:var(--radius-button); --radius-md:var(--radius-card); --radius-lg:var(--radius-sheet);
+ --font-display:Georgia,serif; --font-ui:var(--font-geist-sans),Arial,sans-serif;
+ --text-display:clamp(32px,4vw,48px); --text-section:26px; --text-body:16px; --text-label:14px; --text-caption:12px; --text-nav:12px;
+ --button-small:44px; --button-default:46px; --button-large:50px; --button-icon:44px; --control-height:46px;
+ --tabbar-height:76px; --safe-top:env(safe-area-inset-top,0px); --safe-bottom:env(safe-area-inset-bottom,0px);
+ --shadow-soft:0 3px 12px rgba(32,40,58,.04);
+}
+body{font-family:var(--font-ui);background:var(--background);color:var(--text-primary)}
+.content{padding:var(--space-8) var(--page-padding) 100px}
+.brand{gap:var(--space-3)}.brand img{flex:none;border-radius:var(--radius-button)}
+.sidebar nav a{gap:var(--space-3)}.sidebar nav svg{flex:none}
+.page-header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);margin:0 0 var(--section-gap)}
+.page-header>div{min-width:0}.page-header .eyebrow{margin:0 0 var(--space-2)}
+.page-header h1{font:500 var(--text-display)/1.08 var(--font-display);letter-spacing:-.035em;margin:0 0 var(--space-3);overflow-wrap:anywhere}
+.page-header>div>p:last-child{font-size:var(--text-label);line-height:1.5;margin:0;color:var(--text-secondary)}
+.primary-button,.secondary-button,.outline-button{display:inline-flex;align-items:center;justify-content:center;gap:var(--control-gap);min-height:var(--button-default);border-radius:var(--radius-button);font-size:var(--text-label);padding:0 var(--space-4);font-weight:700}
+.primary-button{box-shadow:var(--shadow-soft)}
+.menu-trigger,.month-toolbar>button,.close{display:inline-flex;align-items:center;justify-content:center;width:var(--button-icon);height:var(--button-icon);padding:0;border-radius:var(--radius-button)}
+.month-toolbar{gap:var(--control-gap);margin:0 0 var(--section-gap)}
+.month-toolbar>input{border-radius:var(--radius-input)}
+.cash-grid article,.section-block,.debt-card,.debt-overview,.settings-card,.income-strip,.hero-grid>article,.debt-wins{border-radius:var(--radius-card);border-color:var(--border);box-shadow:none}
+.section-block,.debt-overview,.settings-card,.debt-card{padding:var(--card-padding)}
+.section-block,.income-strip,.cash-grid,.hero-grid,.debt-overview,.debt-wins{margin-bottom:var(--section-gap)}
+.section-title h2,.settings-card h2,.overview-heading h2{font-family:var(--font-display);font-size:var(--text-section)}
+.expense-actions>button{border-radius:var(--radius-button)}
+.custom-color-toggle,.add-due-row,.month-count button{display:inline-flex;align-items:center;justify-content:center;gap:var(--control-gap)}
+label{font-size:var(--text-label);gap:var(--space-2)}
+input,select,textarea{border:1px solid var(--border);border-radius:var(--radius-input);color:var(--text-primary);background:var(--surface);font-size:var(--text-body)}
+:where(input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=color])),select{min-height:var(--control-height)}
+input::placeholder,textarea::placeholder{color:var(--text-secondary);opacity:.75}
+input:focus-visible,select:focus-visible,textarea:focus-visible{border-color:var(--primary)}
+input:user-invalid,select:user-invalid,input[aria-invalid=true]{border-color:var(--danger);outline-color:var(--danger)}
+.form-help,.field-error{font-size:var(--text-caption);line-height:1.5;margin:0}.field-error{color:var(--danger)}
+.shared-dialog:has(.app-form){padding:0;overflow:hidden;width:min(600px,calc(100vw - 40px));border-radius:var(--radius-sheet)}
+.shared-dialog:has(.color-selector){width:min(800px,calc(100vw - 40px))}
+.app-form{height:auto;max-height:88dvh;min-height:0;display:flex;flex-direction:column;gap:0}
+.app-form .debt-form-header{padding:var(--modal-padding);padding-bottom:var(--space-4);flex:none}
+.app-form .debt-form-header h2{font:600 30px/1.15 var(--font-display);margin:0;padding-right:var(--button-icon)}
+.app-form .debt-form-header .eyebrow{margin:0 0 var(--space-2)}
+.app-form .debt-form-body{min-height:0;overflow:auto;overscroll-behavior:contain;padding:var(--modal-padding);gap:var(--space-4)}
+.app-form .modal-footer{position:static;flex:none;display:flex;justify-content:flex-end;gap:var(--space-3);padding:var(--space-4) var(--modal-padding);margin:0;border-radius:0 0 var(--radius-sheet) var(--radius-sheet);box-shadow:none}
+.app-form .modal-footer button{position:static;min-height:var(--button-default);padding:0 var(--space-5);margin:0;border-radius:var(--radius-button);font-size:var(--text-label);font-weight:700;flex:0 1 auto}
+.app-form .modal-footer button[type=submit]{background:var(--primary);color:white;border:0}
+.shared-dialog .close{top:var(--space-3);right:var(--space-3);background:var(--surface-subtle)}
+.toast button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px}
+@media(max-width:800px) and (min-width:601px){.content{padding:var(--space-6) var(--page-padding) 100px}.brand img{width:36px;height:36px}.sidebar nav a{min-height:48px}}
+@media(max-width:600px){
+ :root{--page-padding:16px;--card-padding:18px;--modal-padding:20px;--section-gap:20px;--text-display:34px;--text-section:24px}
+ .content{width:100%;margin:0;padding:calc(var(--safe-top) + var(--space-4)) var(--page-padding) calc(var(--tabbar-height) + var(--safe-bottom) + var(--space-8));min-height:100dvh}
+ .page-header{display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-4);padding:0;margin-bottom:var(--section-gap)}
+ .page-header>div{width:100%;padding-right:48px}.page-header .primary-button{width:auto;min-height:var(--button-default)}
+ .mobile-settings-link{top:calc(var(--safe-top) + var(--space-3));right:var(--page-padding);border-radius:var(--radius-button);width:44px;height:44px}
+ .sidebar{position:fixed;inset:auto 0 0;height:calc(var(--tabbar-height) + var(--safe-bottom));padding:var(--space-2) var(--space-2) calc(var(--space-2) + var(--safe-bottom));background:var(--nav);border-top:1px solid #ffffff12;box-shadow:0 -2px 12px #2023330a;z-index:30}
+ .sidebar .brand,.sidebar .sidebar-bottom{display:none}.sidebar nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:100%;height:60px;margin:0;gap:var(--space-1)}
+ .sidebar nav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:6px 2px;min-width:0;min-height:48px;border-radius:var(--radius-button);color:#c7ccd8;text-decoration:none}
+ .sidebar nav a span{display:block;font-size:var(--text-nav);line-height:1.15;font-weight:500}
+ .sidebar nav svg{width:24px;height:24px;stroke-width:1.8}
+ .sidebar nav a.active{background:#ffffff12;color:#f4f0ff}.sidebar nav a.active span{font-weight:700}.sidebar nav a.active svg{color:#c4b5fd;stroke-width:2.2}
+ .sidebar nav a:nth-of-type(5),.sidebar .nav-divider{display:none}
+ .shared-dialog:has(.app-form){width:100%;max-height:calc(96dvh - var(--safe-top));border-radius:var(--radius-sheet) var(--radius-sheet) 0 0}
+ .app-form{height:auto;max-height:calc(96dvh - var(--safe-top));padding:0}
+ .app-form .modal-footer{padding:var(--space-4) var(--modal-padding) calc(var(--space-4) + var(--safe-bottom));border-radius:0}
+ .app-form .modal-footer button{flex:1;min-width:0}
+ .cash-grid article{padding:14px}.visual-debt-cards .debt-card{padding:var(--card-padding)}
+ .toast{left:var(--page-padding);right:var(--page-padding);bottom:calc(var(--tabbar-height) + var(--safe-bottom) + var(--space-3))}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
