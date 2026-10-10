@@ -85,7 +85,8 @@ await page.getByLabel("Budget / expected amount").fill("1899");
 await page.getByRole("button", { name: "Save expense" }).click();
 await page.getByText("Test Internet Updated", { exact: true }).waitFor();
 page.once("dialog", dialog => dialog.accept());
-await page.locator(".expense-row").filter({ hasText: "Test Internet Updated" }).getByRole("button", { name: "Delete" }).click();
+await page.locator(".expense-row").filter({ hasText: "Test Internet Updated" }).getByRole("button", { name: "Expense actions for Test Internet Updated" }).click();
+await page.getByRole("menuitem", { name: "Delete expense" }).click();
 assert.equal(await page.getByText("Test Internet Updated", { exact: true }).count(), 0);
 
 await page.goto(`${base}/settings`, { waitUntil: "domcontentloaded" });
