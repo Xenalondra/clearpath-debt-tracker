@@ -8,11 +8,20 @@ const origin="https://clearpath-debt-planner.secretofwings31.chatgpt.site",key="
 await page.getByRole("navigation",{name:"Main navigation"}).waitFor();
 const expected=JSON.parse(await readFile(new URL("../android-wrapper/assets/web/build-info.json",import.meta.url),"utf8"));
 assert.equal(await page.evaluate(()=>window.__CLEARPATH_ANDROID_BUILD__),expected.commit);
+assert.equal(await page.evaluate(()=>window.__CLEARPATH_ANDROID_SOURCE__),expected.sourceSha256);
 const original=await page.evaluate(key=>localStorage.getItem(key),key);
 try{
  for(const route of ["/debts","/expenses","/activity","/settings","/"]){await page.goto(origin+route);await page.getByRole("navigation",{name:"Main navigation"}).waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.equal(await page.evaluate(()=>window.__CLEARPATH_ANDROID_BUILD__),expected.commit);}
  await page.goto(origin+"/debts");await page.getByRole("tab",{name:"By category",exact:true}).click();await page.getByLabel("Search debts").fill("visa");assert.equal(await page.locator(".debt-card").count(),1);await page.getByLabel("Search debts").fill("");await page.getByLabel("Sort by").selectOption("highest-balance");
- await page.screenshot({path:"/tmp/clearpath-android-debts.png",fullPage:true});
+ assert.equal(await page.locator(".page-header").count(),1);
+ assert.equal(await page.locator(".debt-overview").count(),1);
+ // Android WebView full-page screenshots can repeat the compositor surface.
+ await page.screenshot({path:"/tmp/clearpath-android-debts.png",fullPage:false});
+ const month=new Date();month.setUTCMonth(month.getUTCMonth()+2);await page.getByLabel("Viewing month").fill(month.toISOString().slice(0,7));
+ assert.match(await page.locator(".donut-center").innerText(),/PROJECTED REMAINING DEBT/);
+ const amount=async locator=>Number((await locator.innerText()).replace(/[^0-9.]/g,""));
+ assert.equal(await amount(page.locator(".donut-center strong")),await amount(page.locator(".projection-summary strong").first()));
+ await page.locator(".debt-legend button").first().click();const details=page.getByRole("dialog",{name:"Balance details"});await details.waitFor();assert.match(await details.innerText(),/Projected balance[\s\S]*Forecast/);await details.getByRole("button",{name:"Close balance details"}).click();
  // Exercise the same actual payment path inside Android, preserving the original plan.
  await page.evaluate(key=>{const month=new Date().toISOString().slice(0,7);localStorage.setItem(key,JSON.stringify({clearpathVersion:6,debts:[{id:77,name:"Android Test BNPL",category:"BNPL (Pay Later)",variableMonthlyDues:true,balance:1000,originalStartingBalance:2866.66,startingBalance:2866.66,minimum:0,rate:0,dueDay:18,color:"#A78BFA",status:"active"}],monthlyDueSchedules:[{debtId:77,month,dueAmount:543},{debtId:77,month:month==="2026-10"?"2026-11":"2027-01",dueAmount:2323.66}],transactions:[],bills:[],incomeEntries:[],cashBuffer:0}));},key);
  await page.goto(origin);await page.getByLabel("More actions for Android Test BNPL").click();await page.getByRole("menuitem",{name:"Pay in full",exact:true}).click();const confirm=page.getByRole("alertdialog");assert.match(await confirm.innerText(),/₱2,866.66/);await confirm.getByRole("button",{name:"Pay ₱2,866.66",exact:true}).click();await page.waitForTimeout(300);

@@ -14,7 +14,7 @@ async function checkForm(title,primary,width){
  await page.screenshot({path:`/tmp/clearpath-design-${title.toLowerCase().replaceAll(" ","-")}-${width}.png`});await cancel.click();await dialog.waitFor({state:"detached"});
 }
 await go();await page.evaluate(({key,seed})=>localStorage.setItem(key,JSON.stringify(seed)),{key,seed});await go();const baseline=await saved();
-for(const width of [375,390,430,768,1280]){
+for(const width of [360,375,390,430,768,1280]){
  await page.setViewportSize({width,height:812});let headerTop;
  for(const route of ["","/debts","/expenses","/activity","/settings"]){
   await go(route);const h=await page.locator(".page-header").boundingBox();if(headerTop===undefined)headerTop=h.y;else assert.equal(h.y,headerTop,"Inconsistent top spacing");await overflow();

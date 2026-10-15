@@ -3,18 +3,21 @@ import { cp, mkdir, readFile, writeFile, readdir, rm } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
+import { sourceFingerprint } from "./source-fingerprint.mjs";
 const root=path.resolve(import.meta.dirname,"..");
 const target=path.join(root,"android-wrapper/assets/web");
 const source=path.join(root,"dist/client");
 const base=process.env.CLEARPATH_BUILD_URL||"http://localhost:3000";
 if(!/^http:\/\/localhost:\d+$/.test(base))throw new Error("Packaging requires the freshly built local production server.");
 const commit=execFileSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).trim();
+const sourceSha256=await sourceFingerprint();
+const dirty=Boolean(execFileSync("git",["status","--porcelain"],{cwd:root,encoding:"utf8"}).trim());
 await rm(target,{recursive:true,force:true});await mkdir(target,{recursive:true});await cp(source,target,{recursive:true});
 const routes=["/","/debts","/expenses","/activity","/settings","/payments"];
 for(const route of routes){
  const response=await fetch(base+route);if(!response.ok)throw new Error(`Production route ${route} failed: ${response.status}`);
  let html=await response.text();if(!html.includes("Loading Clearpath"))throw new Error(`Not a Clearpath production shell: ${route}`);
- const marker=`<script>window.__CLEARPATH_ANDROID_BUILD__=${JSON.stringify(commit)};</script>`;
+ const marker=`<script>window.__CLEARPATH_ANDROID_BUILD__=${JSON.stringify(commit)};window.__CLEARPATH_ANDROID_SOURCE__=${JSON.stringify(sourceSha256)};</script>`;
  html=html.replace("<head>","<head>"+marker);
  const filename=path.join(target,route==="/"?"index.html":route.slice(1)+"/index.html");await mkdir(path.dirname(filename),{recursive:true});await writeFile(filename,html);
 }
@@ -23,5 +26,5 @@ for(const route of routes){
 await writeFile(path.join(target,"sw.js"),`self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.registration.unregister()));`);
 async function files(dir){const list=[];for(const entry of await readdir(dir,{withFileTypes:true})){const name=path.join(dir,entry.name);if(entry.isDirectory())list.push(...await files(name));else list.push(name);}return list.sort();}
 const assets={};for(const file of await files(target)){const relative=path.relative(target,file);if(relative.split(path.sep).some(part=>part.startsWith(".")))continue;assets[relative]=createHash("sha256").update(await readFile(file)).digest("hex");}
-await writeFile(path.join(target,"build-info.json"),JSON.stringify({commit,builtAt:new Date().toISOString(),routes,assets},null,2));
+await writeFile(path.join(target,"build-info.json"),JSON.stringify({commit,sourceSha256,dirty,builtAt:new Date().toISOString(),routes,assets},null,2));
 console.log(`Packaged ${Object.keys(assets).length} fresh assets and ${routes.length} routes from ${commit}`);

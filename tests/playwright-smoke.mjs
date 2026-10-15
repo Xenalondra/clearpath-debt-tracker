@@ -97,7 +97,13 @@ assert.match(await page.locator(".info-row").innerText(), /Philippine Peso/);
 assert.ok(await page.getByRole("button", { name: "Export backup" }).isVisible());
 const downloadPromise = page.waitForEvent("download");
 await page.getByRole("button", { name: "Export backup" }).click();
-await downloadPromise;
+const download=await downloadPromise;
+const exported=await page.evaluate(()=>JSON.parse(localStorage.getItem("clearpath-plan-v4-php")));
+page.once("dialog",dialog=>dialog.accept());
+await page.locator('input[type="file"]').setInputFiles(await download.path());
+await page.waitForTimeout(300);
+const restored=await page.evaluate(()=>JSON.parse(localStorage.getItem("clearpath-plan-v4-php")));
+for(const field of ["debts","bills","transactions","incomeEntries","monthlyDueSchedules","debtPaymentVersions"])assert.deepEqual(restored[field],exported[field],`Backup roundtrip ${field}`);
 
 await page.goto(base, { waitUntil: "domcontentloaded" });
 await page.evaluate(() => {

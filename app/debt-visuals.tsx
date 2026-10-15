@@ -1,6 +1,7 @@
 "use client";
 import { Tabs } from "./ui";
 import { useState } from "react";
+import { BalanceDonut } from "./charts";
 
 const currency = new Intl.NumberFormat("en-PH",{style:"currency",currency:"PHP",maximumFractionDigits:2});
 export const percentage = (value:number) => new Intl.NumberFormat("en-PH",{maximumFractionDigits:1}).format(value);
@@ -15,18 +16,12 @@ export function ProgressRing({percent,color,completed=false,name}:{percent:numbe
   </div>;
 }
 
-function Donut({slices,total}:{slices:Slice[];total:number}){
-  return <div className="debt-donut" role="img" aria-label={`Total remaining active debt ${currency.format(total)}. Breakdown listed alongside.`}>
-    <svg viewBox="0 0 240 240" aria-hidden="true"><circle cx="120" cy="120" r="100" className="donut-track"/>{slices.map((slice,index)=>{const start=slices.slice(0,index).reduce((sum,item)=>sum+item.percent,0);return <circle key={slice.key} cx="120" cy="120" r="100" fill="none" stroke={slice.color} strokeWidth="24" pathLength="100" strokeDasharray={`${slice.percent} ${100-slice.percent}`} strokeDashoffset={-start} transform="rotate(-90 120 120)"/>;})}</svg>
-    <div className="donut-center" aria-hidden="true"><span>TOTAL REMAINING<br/>DEBT</span><strong>{currency.format(total)}</strong></div>
-  </div>;
-}
-
-export function DebtOverview({analytics,onCompleted}:{analytics:Overview;onCompleted:()=>void}){
-  const [group,setGroup]=useState("debt");const slices=group==="debt"?analytics.byDebt:analytics.byCategory;
-  return <Tabs.Root value={group} onValueChange={setGroup} asChild><section className="debt-overview" aria-label="Debt overview"><div className="overview-heading"><div><p className="eyebrow">DEBT OVERVIEW</p><h2>Where your debt sits</h2><p className="analytics-note">Actual balances today · not a future forecast</p></div><Tabs.List className="overview-segments" aria-label="Debt breakdown"><Tabs.Trigger value="debt">By debt</Tabs.Trigger><Tabs.Trigger value="category">By category</Tabs.Trigger></Tabs.List></div><Tabs.Content value={group}>
-    {analytics.remaining>0?<div className="overview-layout"><Donut slices={slices} total={analytics.remaining}/><ul className="debt-legend" aria-label={group==="debt"?"Remaining balance by debt":"Remaining balance by category"}>{slices.map(slice=><li key={slice.key} aria-label={`${slice.name}: ${currency.format(slice.amount)}, ${percentage(slice.percent)}% of active debt`}><i style={{background:slice.color}} aria-hidden="true"/><div><strong>{slice.name}</strong><span>{currency.format(slice.amount)}</span></div><b>{percentage(slice.percent)}%</b></li>)}</ul></div>:<div className="debt-free"><h3>You’re debt-free 🎉</h3><p>No active balances to show.</p><button className="outline-button" onClick={onCompleted}>View completed debts</button></div>}
-    </Tabs.Content><dl className="overview-metrics"><div><dt>Remaining</dt><dd>{currency.format(analytics.remaining)}</dd></div><div><dt>Balance reduced</dt><dd>{analytics.reduced===null?"Unavailable":currency.format(analytics.reduced)}</dd></div><div><dt>Overall progress</dt><dd>{analytics.percent===null?"Progress unavailable":`${percentage(analytics.percent)}%`}</dd></div><div><dt>Debts cleared</dt><dd>{analytics.cleared} of {analytics.count}</dd></div></dl>
+export function DebtOverview({analytics,chart,forecast=false,month,onCompleted}:{analytics:Overview;chart?:Pick<Overview,"remaining"|"byDebt"|"byCategory">;forecast?:boolean;month?:string;onCompleted:()=>void}){
+  const [group,setGroup]=useState("debt");const data=chart??analytics;const slices=group==="debt"?data.byDebt:data.byCategory;
+  const context=forecast?`Projected balance · ${month} · Forecast`:"Actual balances today";
+  return <Tabs.Root value={group} onValueChange={setGroup} asChild><section className="debt-overview" aria-label="Debt overview"><div className="overview-heading"><div><p className="eyebrow">DEBT OVERVIEW</p><h2>Where your debt sits</h2><p className="analytics-note">{forecast?`${month} · Forecast`:"Actual balances today"}</p></div><Tabs.List className="overview-segments" aria-label="Debt breakdown"><Tabs.Trigger value="debt">By debt</Tabs.Trigger><Tabs.Trigger value="category">By category</Tabs.Trigger></Tabs.List></div><Tabs.Content value={group}>
+    {data.remaining>0?<BalanceDonut key={`${group}-${month}-${forecast}`} slices={slices} total={data.remaining} label={forecast?"PROJECTED REMAINING DEBT":"TOTAL REMAINING DEBT"} context={context} legendLabel={group==="debt"?"Remaining balance by debt":"Remaining balance by category"}/>:<div className="debt-free"><h3>{forecast?"Projected debt-free 🎉":analytics.count>analytics.cleared?"Current balances cleared":"You’re debt-free 🎉"}</h3><p>{forecast?`No projected balances at the end of ${month}. This forecast does not complete your debts.`:analytics.count>analytics.cleared?"Open accounts remain available for new borrowing.":"No active balances to show."}</p>{!forecast&&<button className="outline-button" onClick={onCompleted}>View completed debts</button>}</div>}
+    </Tabs.Content>{forecast&&<p className="analytics-note">Progress below uses actual balances today, not the forecast.</p>}<dl className="overview-metrics"><div><dt>{forecast?"Current remaining":"Remaining"}</dt><dd>{currency.format(analytics.remaining)}</dd></div><div><dt>Balance reduced</dt><dd>{analytics.reduced===null?"Unavailable":currency.format(analytics.reduced)}</dd></div><div><dt>Overall progress</dt><dd>{analytics.percent===null?"Progress unavailable":`${percentage(analytics.percent)}%`}</dd></div><div><dt>Debts cleared</dt><dd>{analytics.cleared} of {analytics.count}</dd></div></dl>
   </section></Tabs.Root>;
 }
 

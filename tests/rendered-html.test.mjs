@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 async function render() {
+  // Validate fresh development source without building when a preview is supplied.
+  if (process.env.CLEARPATH_URL) return fetch(process.env.CLEARPATH_URL, { headers: { accept: "text/html" } });
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
