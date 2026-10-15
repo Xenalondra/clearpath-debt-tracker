@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
+import {parseBackup} from "../lib/backup.mjs";
+import {plannerSummary} from "../lib/planner-summary.mjs";
+import path from "node:path";
+const root=path.resolve(import.meta.dirname,"..");
+const proof=JSON.parse(await readFile(new URL("../work/private-migration-proof.json",import.meta.url),"utf8"));
+assert.equal(proof.passed,true,"Backup round trip must pass before packaging");
+assert.equal(proof.exactRecordsMatch,true,"Every supported record must survive restore");
+assert.deepEqual(proof.original,proof.restored,"Unexplained data mismatches block packaging");
+assert.match(proof.month,/^\d{4}-(0[1-9]|1[0-2])$/);
+const source=parseBackup(await readFile(path.resolve(root,proof.originalBackup),"utf8"),proof.month).data;
+assert.deepEqual(plannerSummary(source,proof.month),proof.original,"Safety copy must still match the verified baseline");
+parseBackup(await readFile(path.resolve(root,proof.exportedBackup),"utf8"),proof.month);
+console.log("PASS: private safety copy and clean-state round-trip proof verified; APK packaging gate is open.");

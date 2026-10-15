@@ -99,8 +99,8 @@ const downloadPromise = page.waitForEvent("download");
 await page.getByRole("button", { name: "Export backup" }).click();
 const download=await downloadPromise;
 const exported=await page.evaluate(()=>JSON.parse(localStorage.getItem("clearpath-plan-v4-php")));
-page.once("dialog",dialog=>dialog.accept());
-await page.locator('input[type="file"]').setInputFiles(await download.path());
+
+await page.locator('input[type="file"]').setInputFiles(await download.path());await page.getByRole("alertdialog").getByRole("button",{name:"Restore",exact:true}).click();
 await page.waitForTimeout(300);
 const restored=await page.evaluate(()=>JSON.parse(localStorage.getItem("clearpath-plan-v4-php")));
 for(const field of ["debts","bills","transactions","incomeEntries","monthlyDueSchedules","debtPaymentVersions"])assert.deepEqual(restored[field],exported[field],`Backup roundtrip ${field}`);

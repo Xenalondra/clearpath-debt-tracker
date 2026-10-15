@@ -5,7 +5,7 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { sourceFingerprint } from "./source-fingerprint.mjs";
 const root=path.resolve(import.meta.dirname,"..");
-const apk=path.resolve(process.argv[2]||path.join(root,"android-wrapper/output/Clearpath-Debt-Planner-v1.2-debug.apk"));
+const apk=path.resolve(process.argv[2]||path.join(root,"android-wrapper/output/Clearpath-Debt-Planner-v1.3-debug.apk"));
 assert.ok((await stat(apk)).size>0);
 const extract=name=>execFileSync("unzip",["-p",apk,"assets/web/"+name],{maxBuffer:20*1024*1024});
 const info=JSON.parse(extract("build-info.json").toString());

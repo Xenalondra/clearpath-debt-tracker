@@ -11,6 +11,7 @@ OUT="$ROOT/output"
 mkdir -p "$BUILD/classes" "$BUILD/compiled" "$OUT"
 test -f "$ROOT/assets/web/build-info.json" || { echo "Package a fresh production web build first." >&2; exit 1; }
 test -f "$ROOT/debug.keystore" || { echo "Existing signing key is unavailable; no key will be replaced or generated." >&2; exit 1; }
+node "$ROOT/check-data-gate.mjs"
 find "$BUILD" -type f -delete
 
 "$TOOLS/aapt2" compile --dir "$ROOT/res" -o "$BUILD/compiled/resources.zip"
@@ -22,6 +23,6 @@ cp "$BUILD/base.apk" "$BUILD/with-dex.apk"
 (cd "$BUILD" && "$TOOLS/aapt" add with-dex.apk classes.dex)
 "$TOOLS/zipalign" -f 4 "$BUILD/with-dex.apk" "$BUILD/aligned.apk"
 
-"$TOOLS/apksigner" sign --ks "$ROOT/debug.keystore" --ks-key-alias clearpath --ks-pass pass:android --key-pass pass:android --out "$OUT/Clearpath-Debt-Planner-v1.2-debug.apk" "$BUILD/aligned.apk"
-"$TOOLS/apksigner" verify --verbose "$OUT/Clearpath-Debt-Planner-v1.2-debug.apk"
-printf '%s\n' "$OUT/Clearpath-Debt-Planner-v1.2-debug.apk"
+"$TOOLS/apksigner" sign --ks "$ROOT/debug.keystore" --ks-key-alias clearpath --ks-pass pass:android --key-pass pass:android --out "$OUT/Clearpath-Debt-Planner-v1.3-debug.apk" "$BUILD/aligned.apk"
+"$TOOLS/apksigner" verify --verbose "$OUT/Clearpath-Debt-Planner-v1.3-debug.apk"
+printf '%s\n' "$OUT/Clearpath-Debt-Planner-v1.3-debug.apk"

@@ -23,7 +23,7 @@ function row(){return page.locator(".check-row").filter({hasText:"Payoff BNPL"})
 async function menu(name="Payoff BNPL"){await page.getByLabel(`More actions for ${name}`,{exact:true}).click();}
 async function different(amount,name="Payoff BNPL"){
  await menu(name);await page.getByRole("menuitem",{name:"Pay different amount",exact:true}).click();
- const form=page.getByRole("dialog");await form.getByLabel("Amount",{exact:true}).fill(String(amount));await form.getByRole("button",{name:"Record payment",exact:true}).click();await page.waitForTimeout(300);
+ const form=page.getByRole("dialog");await form.getByLabel(name==="Rent Test"?"Amount paying now":"Amount",{exact:true}).fill(String(amount));await form.getByRole("button",{name:"Record payment",exact:true}).click();await page.waitForTimeout(300);
 }
 async function full(amount,name="Payoff BNPL"){
  await menu(name);await page.getByRole("menuitem",{name:"Pay in full",exact:true}).click();const confirm=page.getByRole("alertdialog");
