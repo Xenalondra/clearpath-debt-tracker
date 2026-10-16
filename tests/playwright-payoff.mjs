@@ -24,6 +24,7 @@ async function menu(name="Payoff BNPL"){await page.getByLabel(`More actions for 
 async function different(amount,name="Payoff BNPL"){
  await menu(name);await page.getByRole("menuitem",{name:"Pay different amount",exact:true}).click();
  const form=page.getByRole("dialog");await form.getByLabel(name==="Rent Test"?"Amount paying now":"Amount",{exact:true}).fill(String(amount));await form.getByRole("button",{name:"Record payment",exact:true}).click();await page.waitForTimeout(300);
+ if(await form.count())await form.getByRole("button",{name:"Cancel",exact:true}).click();
 }
 async function full(amount,name="Payoff BNPL"){
  await menu(name);await page.getByRole("menuitem",{name:"Pay in full",exact:true}).click();const confirm=page.getByRole("alertdialog");
