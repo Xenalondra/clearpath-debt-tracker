@@ -23,6 +23,6 @@ cp "$BUILD/base.apk" "$BUILD/with-dex.apk"
 (cd "$BUILD" && "$TOOLS/aapt" add with-dex.apk classes.dex)
 "$TOOLS/zipalign" -f 4 "$BUILD/with-dex.apk" "$BUILD/aligned.apk"
 
-"$TOOLS/apksigner" sign --ks "$ROOT/debug.keystore" --ks-key-alias clearpath --ks-pass pass:android --key-pass pass:android --out "$OUT/Clearpath-Debt-Planner-v1.4-debug.apk" "$BUILD/aligned.apk"
-"$TOOLS/apksigner" verify --verbose "$OUT/Clearpath-Debt-Planner-v1.4-debug.apk"
-printf '%s\n' "$OUT/Clearpath-Debt-Planner-v1.4-debug.apk"
+"$TOOLS/apksigner" sign --ks "$ROOT/debug.keystore" --ks-key-alias clearpath --ks-pass pass:android --key-pass pass:android --out "$OUT/Clearpath-Debt-Planner-v1.5-debug.apk" "$BUILD/aligned.apk"
+"$TOOLS/apksigner" verify --verbose "$OUT/Clearpath-Debt-Planner-v1.5-debug.apk"
+printf '%s\n' "$OUT/Clearpath-Debt-Planner-v1.5-debug.apk"

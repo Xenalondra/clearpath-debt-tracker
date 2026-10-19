@@ -24,3 +24,6 @@
 @media(max-width:700px){.overview-layout{grid-template-columns:minmax(130px,.95fr) minmax(0,1fr);gap:12px;padding:16px 0}.debt-donut{max-width:180px}.donut-center{inset:20%;gap:4px}.donut-center strong{font-size:13px;line-height:1.25}.donut-center span{font-size:10px}.debt-legend{max-height:240px}.debt-legend li button{gap:7px;padding:8px 2px}.debt-legend li strong{font-size:12px}.debt-legend .legend-values{font-size:12px;gap:2px 5px}.debt-legend .legend-values b{font-size:11px}}
 @media(max-width:340px){.overview-layout{grid-template-columns:1fr}.debt-donut{max-width:180px}.debt-legend{max-height:200px}}
 @media(max-width:700px){.debt-overview .donut-center{inset:18%;gap:4px}.debt-overview .donut-center strong{font-size:13px;line-height:1.25}.debt-overview .debt-donut{width:100%;max-width:180px}}
+/* Shared scope disclosure for partial-history portfolio progress. */
+.progress-disclosure{overflow-wrap:anywhere;line-height:1.5;margin:12px 0 0}
+.debt-progress-teaser .progress-disclosure{font-size:12px;letter-spacing:normal;font-weight:400;color:var(--text-secondary)}

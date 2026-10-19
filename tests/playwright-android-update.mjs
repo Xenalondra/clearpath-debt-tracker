@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {_android} from 'playwright';
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {plannerSummary} from '../lib/planner-summary.mjs';
-const key='clearpath-plan-v4-php',baselinePath='work/private-backups/android-before-v1.4.json';
+const key='clearpath-plan-v4-php',baselinePath='work/private-backups/android-before-v1.5.json';
 const device=(await _android.devices()).find(d=>d.serial()==='emulator-5554');assert.ok(device,'Existing emulator required');
 const page=await(await device.webView({pkg:'io.clearpath.app'})).page();
 await page.getByRole('navigation',{name:'Main navigation'}).waitFor();
@@ -12,13 +12,13 @@ const raw=await page.evaluate(key=>localStorage.getItem(key),key);assert.ok(raw)
 const packageInfo=(await device.shell('dumpsys package io.clearpath.app')).toString();
 const version=packageInfo.match(/versionName=(\S+)/)?.[1];
 if(process.env.CLEARPATH_ANDROID_CAPTURE_ONLY){
- assert.equal(version,'1.3','Capture the installed previous version BEFORE updating');
+ assert.equal(version,'1.4','Capture the installed previous version BEFORE updating');
  await mkdir('work/private-backups',{recursive:true});
  try{await writeFile(baselinePath,raw,{flag:'wx'});}catch(error){if(error.code!=='EEXIST')throw error;assert.deepEqual(JSON.parse(await readFile(baselinePath,'utf8')),JSON.parse(raw),'Do not overwrite a different baseline');}
- console.log('PASS: captured installed v1.3 emulator records read-only; no navigation or record changes.');
+ console.log('PASS: captured installed v1.4 emulator records read-only; no navigation or record changes.');
  await device.close();
 }else{
- assert.equal(version,'1.4');assert.match(packageInfo,/versionCode=5\b/);
+ assert.equal(version,'1.5');assert.match(packageInfo,/versionCode=6\b/);
  const original=await readFile(baselinePath,'utf8'),before=JSON.parse(original);
  assert.deepEqual(JSON.parse(raw),before,'Every persisted field must survive in-place update');
  const info=JSON.parse(await readFile('android-wrapper/assets/web/build-info.json','utf8'));
@@ -31,7 +31,7 @@ if(process.env.CLEARPATH_ANDROID_CAPTURE_ONLY){
  const row=name=>page.locator('.check-row').filter({hasText:name});
  async function different(name){await page.getByLabel(`More actions for ${name}`,{exact:true}).click();await page.getByRole('menuitem',{name:'Pay different amount',exact:true}).click();}
  async function bounds(){assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.equal(await page.evaluate(()=>window.__CLEARPATH_ANDROID_SOURCE__),info.sourceSha256);}
- console.log('PASS: installed v1.3 → v1.4 update preserves every persisted field; latest bundled commit/source; no import prompt.');
+ console.log('PASS: installed v1.4 → v1.5 update preserves every persisted field; latest bundled commit/source; no import prompt.');
  try{
   for(const name of ['Debts','Expenses','Activity','Dashboard']){await nav(name);await bounds();}
   await page.getByRole('link',{name:'Settings',exact:true}).click();await bounds();
@@ -48,9 +48,24 @@ if(process.env.CLEARPATH_ANDROID_CAPTURE_ONLY){
   await nav('Debts');await page.getByRole('img',{name:'Native BNPL Fixture: 21.6% cleared',exact:true}).waitFor();const canonical=await saved();await page.getByLabel('Viewing month').fill('2027-03');await page.getByRole('img',{name:'Native BNPL Fixture: 21.6% cleared',exact:true}).waitFor();assert.deepEqual(await saved(),canonical);assert.equal(await page.locator('#debt-103').count(),1);assert.match(await page.locator('#debt-103 .credit-utilization').innerText(),/0% of ₱30,000/);await bounds();
   await nav('Activity');assert.equal((await saved()).transactions.filter(t=>t.debtId===100).length,2);
   console.log('PASS: native final/partial expenses, strict debt minimum, November checklist/totals/Smart Plan, BNPL fixture actual progress, zero revolving account, Activity, shared toast/nav clearance and bundled routes.');
+  const advance={...fixture,debts:[{...common,id:100,name:'Native Advance Loan',firstPaymentMonth:'2026-11',minimum:3745,balance:11235,startingBalance:15000},{...common,id:102,name:'Native Unknown History',category:'BNPL (Pay Later)',variableMonthlyDues:true,originalStartingBalance:null,minimum:0,balance:5000}],bills:[],transactions:[],monthlyDueSchedules:[{debtId:102,month,dueAmount:5000}]};
+  await page.evaluate(({key,advance})=>localStorage.setItem(key,JSON.stringify(advance)),{key,advance});await nav('Debts');
+  assert.match(await page.locator('.progress-disclosure').innerText(),/Based on 1 of 2[\s\S]*Native Unknown History/);
+  assert.match(await page.locator('.overview-metrics').innerText(),/25.1%/);
+  await nav('Dashboard');await page.getByLabel('Viewing month').fill('2026-11');
+  const advanceRow=row('Native Advance Loan');await advanceRow.getByRole('button',{name:'Pay Native Advance Loan',exact:true}).click();
+  assert.equal((await saved()).transactions.length,0,'Future checkbox must not create a payment before confirmation');
+  const actualDate=await page.getByLabel('Actual payment date').inputValue();assert.equal(actualDate.slice(0,7),month);
+  await page.getByRole('dialog').getByLabel('Amount',{exact:true}).fill('2000');await page.getByRole('button',{name:'Record advance payment',exact:true}).click();
+  assert.match(await advanceRow.innerText(),/Partial[\s\S]*₱1,745 remaining/);
+  let allocated=await saved();assert.equal(allocated.transactions.length,1);assert.equal(allocated.transactions[0].transactionDate,actualDate);assert.equal(allocated.transactions[0].date,actualDate);assert.equal(allocated.transactions[0].appliedMonth,'2026-11');assert.equal(allocated.debts[0].balance,9235);
+  await advanceRow.getByRole('button',{name:'Pay Native Advance Loan',exact:true}).click();await page.getByRole('button',{name:'Record advance payment',exact:true}).click();
+  assert.match(await advanceRow.innerText(),/Paid in advance/);await advanceRow.getByRole('button',{name:'Paid Native Advance Loan',exact:true}).click();assert.equal((await saved()).transactions.length,2);
+  await nav('Activity');assert.equal(await page.locator('.activity-row').count(),2);assert.match(await page.locator('.activity-row').first().innerText(),/Applies to November 2026/);await bounds();
+  console.log('PASS: native reliable-subset disclosure, explicit future confirmation, partial/full advance allocation, actual-date Activity and duplicate prevention.');
  }finally{
   await page.evaluate(({key,original})=>localStorage.setItem(key,original),{key,original});await nav('Dashboard');const after=await saved();assert.deepEqual(after,before,'Restore emulator baseline exactly after temporary test fixture');
-  await writeFile('work/android-v1.4-qa.json',JSON.stringify({passed:true,commit:info.commit,sourceSha256:info.sourceSha256,exactRecordsMatch:true,before:plannerSummary(before,month),after:plannerSummary(after,month)},null,2));
+  await writeFile('work/android-v1.5-qa.json',JSON.stringify({passed:true,commit:info.commit,sourceSha256:info.sourceSha256,exactRecordsMatch:true,before:plannerSummary(before,month),after:plannerSummary(after,month)},null,2));
   console.log('PASS: original emulator plan restored exactly after native smoke tests. Actual physical-phone Lazada remains NOT TESTED.');await device.close();
  }
 }
